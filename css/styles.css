@@ -132,3 +132,21 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(-
 .modal.mini-player #stage {
   height: 100% !important;
 }
+/* Mobile-specific fix to keep the player locked in 16:9 widescreen on phones */
+@media (max-width: 768px) {
+  .modal {
+    align-items: flex-start !important;
+    padding: 0 !important;
+  }
+  .sheet {
+    width: 100% !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+    border: none !important;
+  }
+  .stage {
+    width: 100% !important;
+    aspect-ratio: 16 / 9 !important;
+    height: auto !important;
+  }
+}
