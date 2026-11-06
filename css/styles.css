@@ -13,7 +13,7 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(-
 #nav{position:fixed;inset:0 0 auto;z-index:40;height:66px;display:flex;align-items:center;gap:28px;padding:0 clamp(16px,4vw,56px);transition:background .3s}
 #nav.solid{background:rgba(7,9,15,.88);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
 .logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:20px;letter-spacing:-.02em;color:var(--text);text-decoration:none}
-.logo-mark{width:32px;height:32px;border-radius:9px;background:var(--grad);display:grid;place-items:center;font-size:12px}
+.logo-mark{width:32px;height:32px;border-radius:99px;background:var(--grad);display:grid;place-items:center;font-size:12px}
 .links{display:flex;gap:4px}
 .links button{padding:6px 14px;border-radius:99px;color:var(--mute);font-weight:600;font-size:14px;transition:.2s}
 .links button:hover,.links button.on{color:var(--text);background:rgba(255,255,255,.08)}
@@ -101,20 +101,6 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(-
 .cat-head h2{margin:0;font-size:clamp(22px,3.4vw,32px);font-weight:800;letter-spacing:-.02em}
 .cat-head .btn{padding:8px 16px}
 .sentinel{min-height:70px;display:grid;place-items:center;color:var(--mute);font-size:13px;margin-top:20px}
-
-/* Mobile Full-Screen Modal Override */
-@media (max-width: 768px) {
-  .modal .sheet {
-    width: 100vw !important;
-    height: 100vh !important;
-    max-width: none !important;
-    border-radius: 0 !important;
-    margin: 0 !important;
-  }
-  .stage {
-    height: 45vh !important;
-  }
-}
 
 /* Floating Mini-Player State */
 .modal.mini-player {
