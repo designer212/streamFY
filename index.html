@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>streamFY – Movies & TV shows</title>
+
+<!-- PWA Manifest & Theme -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0a0e17">
+
+<!-- iOS Mobile Web App Support -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="streamFY">
+
+<!-- App Icons (Fixed syntax) -->
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-512.png">
+
+<!-- Service Worker Registration -->
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js')
+        .then(() => console.log('Service Worker registered successfully!'))
+        .catch(err => console.log('Service Worker registration failed:', err));
+    });
+  }
+</script>
+
+<!-- Server DNS Preconnects for Fast Streaming -->
+<link rel="preconnect" href="https://vidsrc.me">
+<link rel="preconnect" href="https://vidlink.pro">
+<link rel="preconnect" href="https://image.tmdb.org">
+
+<!-- Styles & Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<header id="nav">
+  <a class="logo" href="#" data-view="home"><span class="logo-mark"><i class="fa-solid fa-play"></i></span>streamFY</a>
+  <nav class="links">
+    <button data-view="home" class="on">Home</button>
+    <button data-view="movie">Movies</button>
+    <button data-view="tv">TV shows</button>
+  </nav>
+  <label class="search"><i class="fa-solid fa-magnifying-glass"></i>
+    <input id="q" type="search" placeholder="Search titles" autocomplete="off"></label>
+</header>
+
+<main>
+  <div id="setup" class="setup" hidden>
+    <h2>Add your TMDB API key</h2>
+    <p>Open <code>js/config.js</code> and paste your key into <code>TMDB_API_KEY</code>, then reload this page.</p>
+  </div>
+  <section id="hero" class="hero"></section>
+  <section id="results" class="results wrap" hidden></section>
+  <section id="category" class="results wrap" hidden>
+    <div class="cat-head">
+      <button class="btn sec" data-back><i class="fa-solid fa-arrow-left"></i> Back</button>
+      <h2 id="catTitle"></h2>
+    </div>
+    <div id="catGrid" class="grid"></div>
+    <div id="catEnd" class="sentinel" aria-live="polite"></div>
+  </section>
+  <div id="rows"></div>
+</main>
+
+<footer class="foot wrap">
+  <a href="mailto:nyasatech1@gmail.com" aria-label="Email us"><i class="fa-solid fa-envelope"></i></a>
+  <p>© 2026 streamFY · Powered by nyasatech1 developers</p>
+</footer>
+
+<div id="modal" class="modal" hidden>
+  <div class="sheet" role="dialog" aria-modal="true">
+    <button class="x" id="close" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
+    <div id="stage" class="stage" style="min-height:360px; position:relative; background:#000;"></div>
+    <div id="info" class="info"></div>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
