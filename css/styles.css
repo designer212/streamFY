@@ -1,7 +1,7 @@
 :root{--bg:#07090f;--panel:#0f1420;--line:rgba(255,255,255,.09);--text:#eef2f8;--mute:#8e99ad;--a:#22d3ee;--v:#8b5cf6;--grad:linear-gradient(135deg,#22d3ee,#8b5cf6)}
 *{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth}
-body{background:var(--bg);color:var(--text);font:400 15px/1.55 'Plus Jakarta Sans',system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{background:var(--bg);color:var(--text);font:400 15px/1.55 'Plus Jakarta Sans',system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column;-webkit-tap-highlight-color:transparent}
 main{flex:1}
 img{display:block;max-width:100%}
 button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
@@ -10,8 +10,8 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(-
 .wrap{padding:0 clamp(16px,4vw,56px)}
 
 /* Navigation */
-#nav{position:fixed;inset:0 0 auto;z-index:40;height:66px;display:flex;align-items:center;gap:28px;padding:0 clamp(16px,4vw,56px);transition:background .3s}
-#nav.solid{background:rgba(7,9,15,.88);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+#nav{position:fixed;inset:0 0 auto;z-index:40;height:calc(66px + env(safe-area-inset-top,0px));padding:env(safe-area-inset-top,0px) clamp(16px,4vw,56px) 0;display:flex;align-items:center;gap:28px;transition:background .3s}
+#nav.solid{background:rgba(7,9,15,.88);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
 .logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:20px;letter-spacing:-.02em;color:var(--text);text-decoration:none}
 .logo-mark{width:32px;height:32px;border-radius:9px;background:var(--grad);display:grid;place-items:center;font-size:12px}
 .links{display:flex;gap:4px}
@@ -44,7 +44,7 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(-
 .row-head{padding:0 clamp(16px,4vw,56px);margin-bottom:10px;display:flex;align-items:baseline;justify-content:space-between;gap:12px}
 .row-head h2{font-size:19px;font-weight:700;letter-spacing:-.01em}
 .row-wrap{position:relative}
-.track{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x proximity;padding:6px clamp(16px,4vw,56px) 14px;scrollbar-width:none}
+.track{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;padding:6px clamp(16px,4vw,56px) 14px;scrollbar-width:none}
 .track::-webkit-scrollbar{display:none}
 .arr{position:absolute;top:0;bottom:14px;width:48px;z-index:5;display:grid;place-items:center;opacity:0;transition:.2s;background:linear-gradient(90deg,rgba(7,9,15,.9),transparent)}
 .arr.r{right:0;background:linear-gradient(270deg,rgba(7,9,15,.9),transparent)}
@@ -59,19 +59,23 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(-
 .card small{color:var(--mute);font-size:12px}
 .sk .ph{animation:pulse 1.4s infinite}
 @keyframes pulse{50%{opacity:.4}}
-.results{padding-top:96px;padding-bottom:30px}
+.results{padding-top:calc(96px + env(safe-area-inset-top,0px));padding-bottom:30px}
 .results h2{margin-bottom:16px;font-size:20px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:18px}
 .grid .card{flex:none}
 .empty{color:var(--mute)}
 
 /* Modal + player */
-.modal{position:fixed;inset:0;z-index:60;background:rgba(3,5,9,.86);backdrop-filter:blur(8px);display:grid;place-items:center;padding:16px;overflow:auto}
-.sheet{position:relative;width:min(900px,100%);background:var(--panel);border:1px solid var(--line);border-radius:18px;overflow:hidden;animation:pop .25s ease}
+.modal{position:fixed;inset:0;z-index:60;background:rgba(3,5,9,.86);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);display:grid;place-items:center;padding:16px;overflow:auto;overscroll-behavior:contain}
+.sheet{position:relative;width:min(900px,100%);margin:auto;background:var(--panel);border:1px solid var(--line);border-radius:18px;overflow:hidden;animation:pop .25s ease}
 @keyframes pop{from{transform:scale(.96);opacity:0}}
-.x{position:absolute;top:12px;right:12px;z-index:9;width:36px;height:36px;border-radius:50%;background:rgba(7,9,15,.75)}
-.stage{position:relative;aspect-ratio:16/9;background:#000 center/cover;display:grid;place-items:center}
+.x{position:absolute;top:12px;right:12px;z-index:50;width:36px;height:36px;border-radius:50%;background:rgba(7,9,15,.75)}
+
+/* The stage keeps a true 16:9 box; the inline min-height in index.html must not stretch it */
+.stage{position:relative;aspect-ratio:16/9;min-height:0!important;background:#000 center/cover;display:grid;place-items:center}
 .stage video,.stage iframe{width:100%;height:100%;border:0;background:#000}
+.modal #playerIframe{position:absolute;inset:0;width:100%;height:100%}
+.stage:fullscreen,#stage:fullscreen{width:100vw;height:100vh!important;aspect-ratio:auto!important}
 .stage .note{max-width:420px;text-align:center;padding:20px;background:rgba(7,9,15,.82);border-radius:12px;color:#d5dbe6}
 .tr{position:absolute;inset:0;cursor:pointer}
 .tr iframe{pointer-events:none}
@@ -83,14 +87,14 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(-
 .tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 .tags span{font-size:12px;font-weight:600;padding:3px 11px;border-radius:99px;border:1px solid var(--line);color:var(--mute)}
 
+/* Keep the close button clear of the player control bar */
+#playerNav{right:60px!important}
+
 .setup{margin:110px clamp(16px,4vw,56px) 0;padding:22px;border:1px solid var(--v);border-radius:14px;background:var(--panel)}
 .setup code{background:rgba(255,255,255,.08);padding:1px 6px;border-radius:5px}
-.foot{padding-top:34px;padding-bottom:34px;margin-top:40px;border-top:1px solid var(--line);text-align:center;color:var(--mute);font-size:13px}
+.foot{padding-top:34px;padding-bottom:calc(34px + env(safe-area-inset-bottom,0px));margin-top:40px;border-top:1px solid var(--line);text-align:center;color:var(--mute);font-size:13px}
 .foot a{display:inline-grid;place-items:center;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);color:var(--a);margin-bottom:10px}
 .foot .small{font-size:11px;margin-top:4px}
-
-@media(max-width:640px){.links{display:none}.hero{height:62vh}.arr{display:none}}
-@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
 /* "More" button + category page */
 .more{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--a);padding:4px 10px;border-radius:99px;transition:.2s}
@@ -102,65 +106,35 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(-
 .cat-head .btn{padding:8px 16px}
 .sentinel{min-height:70px;display:grid;place-items:center;color:var(--mute);font-size:13px;margin-top:20px}
 
-/* Mobile Full-Screen Modal Override */
-@media (max-width: 768px) {
-  .modal .sheet {
-    width: 100vw !important;
-    height: 100vh !important;
-    max-width: none !important;
-    border-radius: 0 !important;
-    margin: 0 !important;
-  }
-  .stage {
-    height: 45vh !important;
-  }
-}
-
 /* Floating Mini-Player State */
-.modal.mini-player {
-  position: fixed !important;
-  bottom: 20px !important;
-  right: 20px !important;
-  top: auto !important;
-  left: auto !important;
-  width: 320px !important;
-  height: 180px !important;
-  z-index: 9999 !important;
-  background: transparent !important;
-  pointer-events: auto !important;
-}
+.modal.mini-player{position:fixed!important;bottom:20px!important;right:20px!important;top:auto!important;left:auto!important;width:320px!important;height:180px!important;z-index:9999!important;background:transparent!important;pointer-events:auto!important}
+.modal.mini-player .sheet{width:100%!important;height:100%!important;border-radius:12px!important;box-shadow:0 10px 30px rgba(0,0,0,.8)!important;overflow:hidden!important}
+.modal.mini-player #info,.modal.mini-player .x{display:none!important}
+.modal.mini-player #stage{height:100%!important}
 
-.modal.mini-player .sheet {
-  width: 100% !important;
-  height: 100% !important;
-  border-radius: 12px !important;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.8) !important;
-  overflow: hidden !important;
-}
+/* Phones */
+@media(max-width:768px){
+  /* Popup becomes a full-screen page that scrolls, so nothing below the player is cut off */
+  .modal{display:block;padding:0;overflow-y:auto}
+  .modal .sheet{width:100%;min-height:100%;margin:0;border:0;border-radius:0;overflow:visible;animation:none}
+  .modal .x{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));right:12px}
+  #playerNav{right:56px!important}
 
-.modal.mini-player #info,
-.modal.mini-player .x {
-  display: none !important;
-}
+  /* Player: exact 16:9 from the screen width (never collapses, never stretches).
+     The .modal #stage selector outranks any older #stage rules injected by the script. */
+  .modal #stage:not(:fullscreen){height:56.25vw!important;aspect-ratio:auto!important;min-height:0!important;max-height:none!important;flex:none!important}
+  .modal #playerIframe{position:absolute!important;inset:0!important;width:100%!important;height:100%!important}
 
-.modal.mini-player #stage {
-  height: 100% !important;
-}
+  /* Compact controls so they don't cover the video */
+  .modal #playerNav{top:8px!important;left:8px!important;padding:6px 8px!important;border-radius:10px!important}
+  .modal #playerNav>div>button,.modal #playerNav>div>a{padding:6px 10px!important;font-size:11px!important}
+  .modal #fsText{display:none}
+  .modal #playerMiniBtn{top:8px!important;left:8px!important;width:32px!important;height:32px!important}
+  .modal #adShield{top:48px!important;height:calc(100% - 48px)!important}
 
-/* ===== Popup fixes (added) ===== */
-#nav.solid { -webkit-backdrop-filter: blur(14px); }
-.modal { -webkit-backdrop-filter: blur(8px); padding: 16px; }
-.sheet { margin: auto; }
-.x { z-index: 50; }
-#playerNav { right: 60px !important; }
-
-@media (max-width: 768px) {
-  .modal { padding: 0; place-items: stretch; }
-  .modal .sheet {
-    height: 100vh !important;
-    height: 100dvh !important;
-    overflow-y: auto !important;
-  }
-  .modal .x { position: fixed; top: 12px; right: 12px; }
-  #playerNav { right: 56px !important; }
+  .info{padding:18px 16px calc(24px + env(safe-area-inset-bottom,0px))}
+  .info h2{font-size:22px}
+  .search input{font-size:16px}
 }
+@media(max-width:640px){.links{display:none}.hero{height:62vh}.arr{display:none}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
