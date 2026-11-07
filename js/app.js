@@ -329,6 +329,22 @@ window.playServer = function(idx) {
   clearTimeout(playerHideTimer);
   
   st.innerHTML = `
+    <style>
+      @media (max-width: 768px) {
+        /* keep the player a proper 16:9 box instead of stretching */
+        #stage:not(:fullscreen) { aspect-ratio: 16 / 9 !important; height: auto !important; min-height: 0 !important; max-height: none !important; }
+        #playerIframe { width: 100% !important; height: 100% !important; }
+
+        /* compact control bar so it doesn't cover the video */
+        #playerNav { top: 8px !important; left: 8px !important; right: 8px !important; padding: 6px 8px !important; border-radius: 10px !important; }
+        #playerNav > div > button, #playerNav > div > a { padding: 6px 10px !important; font-size: 11px !important; }
+        #fsText { display: none; }
+        #playerMiniBtn { top: 8px !important; left: 8px !important; width: 32px !important; height: 32px !important; }
+
+        /* match the shield to the smaller bar */
+        #adShield { top: 48px !important; height: calc(100% - 48px) !important; }
+      }
+    </style>
     <!-- Mini Trigger Button (Three Dots) - Shown when nav is hidden -->
     <button id="playerMiniBtn" onclick="togglePlayerNav()" style="position:absolute; top:16px; left:16px; z-index:35; background:rgba(10, 14, 23, 0.75); color:#fff; border:1px solid rgba(255,255,255,0.15); width:38px; height:38px; border-radius:10px; cursor:pointer; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); box-shadow: 0 4px 20px rgba(0,0,0,0.5); opacity:0; pointer-events:none; transition:all 0.3s cubic-bezier(0.4, 0, 0.2, 1);" title="Show Controls">
       <i class="fa-solid fa-ellipsis" style="font-size:16px; color:#00f2fe;"></i>
