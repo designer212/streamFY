@@ -39,6 +39,25 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="css/styles.css">
+
+<!-- Privacy Policy popup styles (self-contained, prefixed with pp-) -->
+<style>
+  #privacyModal[hidden] { display: none !important; }
+  #privacyModal { position: fixed; inset: 0; z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(0,0,0,0.75); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+  .pp-sheet { position: relative; width: 100%; max-width: 720px; max-height: 88vh; overflow-y: auto; background: #101622; color: #e2e8f0; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 28px 24px 24px; font-family: 'Plus Jakarta Sans', sans-serif; line-height: 1.6; box-shadow: 0 20px 60px rgba(0,0,0,0.7); }
+  .pp-sheet h2 { margin: 0 0 4px; font-size: 22px; color: #fff; }
+  .pp-sheet h3 { margin: 22px 0 6px; font-size: 15px; color: #00f2fe; }
+  .pp-sheet p, .pp-sheet li { font-size: 14px; color: #cbd5e1; margin: 6px 0; }
+  .pp-sheet ul { padding-left: 20px; margin: 6px 0; }
+  .pp-sheet a { color: #00f2fe; }
+  .pp-sheet .pp-date { font-size: 12px; color: #94a3b8; margin-bottom: 12px; }
+  .pp-x { position: absolute; top: 12px; right: 12px; width: 34px; height: 34px; border-radius: 50%; border: none; cursor: pointer; background: rgba(255,255,255,0.08); color: #fff; }
+  .pp-clear { margin-top: 10px; background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.35); padding: 9px 16px; border-radius: 10px; font-weight: 700; font-size: 13px; cursor: pointer; font-family: inherit; }
+  .pp-status { font-size: 12px; color: #22c55e; margin-left: 8px; }
+  .foot .pp-link { background: none; border: none; padding: 0; color: #94a3b8; text-decoration: underline; cursor: pointer; font: inherit; }
+  .foot .pp-link:hover { color: #00f2fe; }
+  @media (max-width: 600px) { .pp-sheet { padding: 24px 16px 18px; max-height: 92vh; } }
+</style>
 </head>
 <body>
 <header id="nav">
@@ -72,7 +91,7 @@
 
 <footer class="foot wrap">
   <a href="mailto:nyasatech1@gmail.com" aria-label="Email us"><i class="fa-solid fa-envelope"></i></a>
-  <p>© 2026 streamFY · Powered by nyasatech1 developers</p>
+  <p>© 2026 streamFY · Powered by nyasatech1 developers · <button type="button" id="privacyLink" class="pp-link">Privacy Policy</button></p>
 </footer>
 
 <div id="modal" class="modal" hidden>
@@ -83,7 +102,92 @@
   </div>
 </div>
 
+<!-- Privacy Policy & Data Use -->
+<div id="privacyModal" hidden>
+  <div class="pp-sheet" role="dialog" aria-modal="true" aria-labelledby="ppTitle">
+    <button class="pp-x" id="privacyClose" aria-label="Close privacy policy"><i class="fa-solid fa-xmark"></i></button>
+    <h2 id="ppTitle">Privacy Policy &amp; Data Use</h2>
+    <p class="pp-date">Last updated: November 7, 2026</p>
+    <p>streamFY is a movie and TV browsing app. We keep things simple: there are no accounts, no sign-up, and we do not sell your data. This page explains what is stored on your device and what is sent to other services when you use the app.</p>
+
+    <h3>1. What we store on your device</h3>
+    <ul>
+      <li><strong>Watchlist (local storage):</strong> When you tap "Watchlist", the title, poster, rating and year are saved in your browser's local storage on your own device. We cannot see it, and it is never uploaded to us.</li>
+      <li><strong>App cache (service worker):</strong> To load faster and work like an installed app, streamFY may save copies of its own files (pages, styles, scripts, icons) and some images in your browser's cache. This is only a copy of public app files and artwork. It does not contain personal information.</li>
+    </ul>
+
+    <h3>2. How the cache is used</h3>
+    <ul>
+      <li>The cache makes the app open faster and use less mobile data.</li>
+      <li>It may be updated automatically when we release a new version of the app.</li>
+      <li>It stays on your device until you clear it or uninstall the app.</li>
+    </ul>
+
+    <h3>3. Information we do not collect</h3>
+    <p>streamFY does not ask for your name, email, phone number or location, and the app itself does not run advertising or analytics trackers. We do not create profiles about you.</p>
+
+    <h3>4. Third-party services</h3>
+    <p>To work, the app connects to other services. When it does, your device sends them standard technical information such as your IP address and browser type, and they have their own privacy policies:</p>
+    <ul>
+      <li><strong>TMDB (The Movie Database):</strong> provides titles, posters and details. Searches you type are sent to TMDB to get results. <em>This product uses the TMDB API but is not endorsed or certified by TMDB.</em></li>
+      <li><strong>Video players / streaming embeds:</strong> when you press Watch, the video loads from an external provider inside the player. These providers may set their own cookies, show their own ads, or collect usage data. We do not control them and do not host any video files.</li>
+      <li><strong>YouTube (privacy-enhanced mode):</strong> trailers are played from YouTube.</li>
+      <li><strong>Google Fonts and Font Awesome (CDN):</strong> used to load fonts and icons.</li>
+    </ul>
+
+    <h3>5. Your choices</h3>
+    <ul>
+      <li>You can remove titles from your watchlist at any time from the title's page.</li>
+      <li>You can delete everything streamFY stored on this device with the button below, or by clearing the site's data in your browser settings.</li>
+      <li>You can use private/incognito mode or block third-party cookies in your browser to limit what external players store.</li>
+    </ul>
+    <button type="button" class="pp-clear" id="ppClear"><i class="fa-solid fa-trash"></i> Clear my watchlist &amp; cache</button><span class="pp-status" id="ppStatus" hidden>Cleared!</span>
+
+    <h3>6. Children</h3>
+    <p>streamFY is not directed at children under 13, and we do not knowingly collect personal information from them.</p>
+
+    <h3>7. Changes</h3>
+    <p>We may update this policy when the app changes. The date at the top shows the latest version.</p>
+
+    <h3>8. Contact</h3>
+    <p>Questions? Email <a href="mailto:nyasatech1@gmail.com">nyasatech1@gmail.com</a>.</p>
+  </div>
+</div>
+
 <script src="js/config.js"></script>
 <script src="js/app.js"></script>
+
+<!-- Privacy Policy controls (independent of app.js) -->
+<script>
+(() => {
+  const pm = document.getElementById('privacyModal');
+  const open = () => { pm.hidden = false; document.body.style.overflow = 'hidden'; };
+  const close = () => {
+    pm.hidden = true;
+    const detail = document.getElementById('modal');
+    if (!detail || detail.hidden) document.body.style.overflow = '';
+    if (location.hash === '#privacy') history.replaceState(null, '', location.pathname + location.search);
+  };
+
+  document.getElementById('privacyLink').addEventListener('click', open);
+  document.getElementById('privacyClose').addEventListener('click', close);
+  pm.addEventListener('click', e => { if (e.target === pm) close(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !pm.hidden) close(); });
+  if (location.hash === '#privacy') open();
+
+  document.getElementById('ppClear').addEventListener('click', async () => {
+    try { localStorage.removeItem('streamfy_watchlist'); } catch (e) {}
+    try {
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map(k => caches.delete(k)));
+      }
+    } catch (e) {}
+    const s = document.getElementById('ppStatus');
+    s.hidden = false;
+    setTimeout(() => (s.hidden = true), 2500);
+  });
+})();
+</script>
 </body>
 </html>
