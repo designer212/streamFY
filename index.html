@@ -2,8 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>streamFY – Movies & TV shows</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="streamFY: browse movies and TV shows, save favourites and pick up where you left off.">
+<title>streamFY – Movies &amp; TV shows</title>
 
 <!-- PWA Manifest & Theme -->
 <link rel="manifest" href="manifest.json">
@@ -14,7 +15,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="streamFY">
 
-<!-- App Icons (Fixed syntax) -->
+<!-- App Icons -->
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-512.png">
 
@@ -29,55 +30,248 @@
   }
 </script>
 
-<!-- Server DNS Preconnects for Fast Streaming -->
-<link rel="preconnect" href="https://vidsrc.me">
-<link rel="preconnect" href="https://vidlink.pro">
+<!-- Preconnects (only first-party content: posters load on every page) -->
 <link rel="preconnect" href="https://image.tmdb.org">
 
 <!-- Styles & Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="css/styles.css">
 
-<!-- Privacy Policy popup styles (self-contained, prefixed with pp-) -->
+<!-- Page-level styles (loaded after styles.css so they win without !important where possible) -->
 <style>
-  #privacyModal[hidden] { display: none !important; }
-  #privacyModal { position: fixed; inset: 0; z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(0,0,0,0.75); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
-  .pp-sheet { position: relative; width: 100%; max-width: 720px; max-height: 88vh; overflow-y: auto; background: #101622; color: #e2e8f0; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 28px 24px 24px; font-family: 'Plus Jakarta Sans', sans-serif; line-height: 1.6; box-shadow: 0 20px 60px rgba(0,0,0,0.7); }
+  /* ---------- Look & spacing ---------- */
+  /* Glow lives on its own fixed layer (painted once) instead of background-attachment:fixed, which repaints on every scroll frame */
+  body::before {
+    content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; transform: translateZ(0);
+    background:
+      radial-gradient(900px 520px at 88% -6%, rgba(139,92,246,.14), transparent 60%),
+      radial-gradient(700px 420px at -4% 30%, rgba(34,211,238,.07), transparent 60%);
+  }
+  select:focus-visible { outline: 2px solid var(--a); outline-offset: 2px; }
+
+  /* Hero */
+  .hero { height: min(70vh, 600px); min-height: 420px; }
+  .hero-body { padding-bottom: 52px; max-width: 640px; }
+  .hero h1 { font-size: clamp(30px, 5vw, 56px); }
+  .hero .meta { gap: 8px; }
+  .hero .meta > span { padding: 3px 11px; border-radius: 99px; background: rgba(255,255,255,.1); border: 1px solid var(--line); }
+  /* The hero buttons carry inline colours from app.js, so these need !important */
+  .hero .btn { padding: 12px 24px !important; border-radius: 99px !important; font-size: 14px !important; font-weight: 700 !important; }
+  .hero .btn.pri { background: var(--grad) !important; color: #fff !important; box-shadow: 0 8px 24px rgba(139,92,246,.35); }
+  .hero .btn.sec { background: rgba(255,255,255,.12) !important; color: #fff !important; border: 1px solid var(--line) !important; }
+
+  /* Rows: tighter gaps between categories, slight overlap with the hero fade */
+  #rows { margin-top: -16px; position: relative; z-index: 2; padding-bottom: 6px; }
+  .row { padding: 6px 0 0; content-visibility: auto; contain-intrinsic-size: auto 250px; }
+  .row-head { margin-bottom: 2px; }
+  .row-head h2 { font-size: 18px; display: flex; align-items: center; gap: 10px; }
+  .row-head h2::before { content: ""; width: 4px; height: 16px; border-radius: 2px; background: var(--grad); }
+  .track { gap: 10px; padding-top: 4px; padding-bottom: 8px; }
+  .arr { bottom: 8px; }
+  .foot { margin-top: 20px; }
+
+  /* Card sizes */
+  :root { --card-width: clamp(104px, 11vw, 148px); }
+  .card { flex: 0 0 var(--card-width); }
+  .card h3 { margin-top: 6px; }
+  .card .ph { border-radius: 12px; }
+  .grid { grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 14px 12px; }
+  .grid .empty { grid-column: 1 / -1; }
+
+  /* Watchlist / History / Settings pages */
+  .results { padding-bottom: 20px; }
+  .results .page-title { font-size: 24px; font-weight: 800; letter-spacing: -.02em; margin-bottom: 14px; display: flex; align-items: center; gap: 10px; }
+  .page-title i { color: var(--a); font-size: .8em; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 22px; max-width: 600px; }
+  .panel h3 { font-size: 16px; color: var(--a); margin-bottom: 6px; }
+  .panel p { color: var(--mute); font-size: 13px; margin-bottom: 14px; }
+  .panel select { width: 100%; background: var(--bg); color: var(--text); padding: 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,.15); font: inherit; font-weight: 600; font-size: 14px; cursor: pointer; }
+
+  /* Navigation: six links + search need a little more room */
+  #nav { gap: 18px; }
+  .links { gap: 2px; }
+  .links button { padding: 6px 12px; white-space: nowrap; }
+  .search { width: min(260px, 28vw); }
+  .logo-mark { overflow: hidden; }
+  .logo-mark img { width: 100%; height: 100%; object-fit: cover; border-radius: 9px; }
+
+  /* ---------- Mobile menu (bottom sheet) ---------- */
+  #mobileMenuBtn {
+    display: none; position: fixed; left: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 1000;
+    width: 50px; height: 50px; border-radius: 50%; background: var(--grad); color: #fff;
+    align-items: center; justify-content: center; font-size: 18px;
+    box-shadow: 0 8px 25px rgba(34,211,238,.4); transition: transform .2s cubic-bezier(.4,0,.2,1);
+  }
+  #mobileMenuBtn:active { transform: scale(.92); }
+  /* Classes are toggled by the small script at the bottom (no :has(), which re-checks the whole page on every DOM change) */
+  body.detail-open #mobileMenuBtn { display: none !important; }
+  body.bar-open #mobileMenuBtn { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
+
+  #mobileMenuOverlay {
+    position: fixed; inset: 0; z-index: 1500; background: rgba(0,0,0,.82);
+    display: flex; align-items: flex-end;
+    opacity: 0; visibility: hidden; pointer-events: none;
+    transition: opacity .3s ease, visibility 0s linear .3s;
+  }
+  #mobileMenuOverlay.open { opacity: 1; visibility: visible; pointer-events: auto; transition-delay: 0s; }
+  .mobile-sheet {
+    width: 100%; background: var(--panel); border-top: 1px solid rgba(255,255,255,.12);
+    border-radius: 24px 24px 0 0; padding: 20px 18px calc(26px + env(safe-area-inset-bottom, 0px));
+    transform: translateY(100%); transition: transform .35s cubic-bezier(.1,.9,.2,1);
+    box-shadow: 0 -15px 40px rgba(0,0,0,.8); display: flex; flex-direction: column; gap: 8px;
+  }
+  #mobileMenuOverlay.open .mobile-sheet { transform: translateY(0); }
+  .sheet-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .sheet-head span { font-size: 16px; font-weight: 800; }
+  #closeMobileMenu { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.08); }
+  .mobile-sheet [data-view] {
+    display: flex; align-items: center; gap: 14px; width: 100%; padding: 13px 16px;
+    background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); border-radius: 14px;
+    font-size: 15px; font-weight: 600; text-align: left; transition: background .2s;
+  }
+  .mobile-sheet [data-view] i { width: 20px; text-align: center; color: var(--a); }
+  .mobile-sheet [data-view].on, .mobile-sheet [data-view]:hover { background: rgba(34,211,238,.12); border-color: rgba(34,211,238,.3); color: var(--a); }
+
+  /* ---------- Floating player controller (Edge-style pill) ---------- */
+  #floating-player-bar {
+    position: fixed; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+    width: max-content; max-width: calc(100% - 24px); z-index: 9999;
+    display: flex; align-items: center; justify-content: space-between; gap: 14px;
+    padding: 6px 6px 6px 16px; border-radius: 16px;
+    background: rgba(30,30,32,.94); border: 1px solid rgba(255,255,255,.14);
+    box-shadow: 0 8px 28px rgba(0,0,0,.5); color: #fff;
+  }
+  #floating-player-bar[hidden] { display: none; }
+  #floating-title { font-weight: 700; font-size: 14px; max-width: 40vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .floating-controls { display: flex; align-items: center; gap: 4px; }
+  .floating-controls button, .floating-controls a {
+    height: 36px; padding: 0 14px; border-radius: 11px; background: transparent; color: #fff;
+    font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 7px; text-decoration: none;
+    transition: background .15s, transform .1s;
+  }
+  .floating-controls button:hover, .floating-controls a:hover { background: rgba(255,255,255,.16); }
+  .floating-controls button:active { transform: scale(.95); }
+  #float-popout-btn { background: var(--grad); }
+  #float-popout-btn:hover { filter: brightness(1.1); background: var(--grad); }
+
+  /* ---------- Privacy modal ---------- */
+  #privacyModal[hidden] { display: none; }
+  #privacyModal { position: fixed; inset: 0; z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(0,0,0,.82); }
+  .pp-sheet { position: relative; width: 100%; max-width: 720px; max-height: 88vh; overflow-y: auto; background: #101622; color: #e2e8f0; border: 1px solid rgba(255,255,255,.1); border-radius: 16px; padding: 28px 24px 24px; line-height: 1.6; box-shadow: 0 20px 60px rgba(0,0,0,.7); }
   .pp-sheet h2 { margin: 0 0 4px; font-size: 22px; color: #fff; }
-  .pp-sheet h3 { margin: 22px 0 6px; font-size: 15px; color: #00f2fe; }
+  .pp-sheet h3 { margin: 20px 0 6px; font-size: 15px; color: var(--a); }
   .pp-sheet p, .pp-sheet li { font-size: 14px; color: #cbd5e1; margin: 6px 0; }
   .pp-sheet ul { padding-left: 20px; margin: 6px 0; }
-  .pp-sheet a { color: #00f2fe; }
-  .pp-sheet .pp-date { font-size: 12px; color: #94a3b8; margin-bottom: 12px; }
-  .pp-x { position: absolute; top: 12px; right: 12px; width: 34px; height: 34px; border-radius: 50%; border: none; cursor: pointer; background: rgba(255,255,255,0.08); color: #fff; }
-  .pp-clear { margin-top: 10px; background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.35); padding: 9px 16px; border-radius: 10px; font-weight: 700; font-size: 13px; cursor: pointer; font-family: inherit; }
+  .pp-sheet a { color: var(--a); }
+  .pp-sheet .pp-date { font-size: 12px; color: var(--mute); margin-bottom: 12px; }
+  .pp-x { position: absolute; top: 12px; right: 12px; width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,.08); color: #fff; }
+  .pp-clear { margin-top: 10px; background: rgba(239,68,68,.15); color: #ef4444; border: 1px solid rgba(239,68,68,.35); padding: 9px 16px; border-radius: 10px; font-weight: 700; font-size: 13px; }
   .pp-status { font-size: 12px; color: #22c55e; margin-left: 8px; }
-  .foot .pp-link { background: none; border: none; padding: 0; color: #94a3b8; text-decoration: underline; cursor: pointer; font: inherit; }
-  .foot .pp-link:hover { color: #00f2fe; }
-  @media (max-width: 600px) { .pp-sheet { padding: 24px 16px 18px; max-height: 92vh; } }
+  .foot .pp-link { padding: 0; color: var(--mute); text-decoration: underline; font: inherit; }
+  .foot .pp-link:hover { color: var(--a); }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 900px) {
+    .links button { padding: 6px 9px; font-size: 13px; }
+    .search { width: min(200px, 30vw); }
+  }
+  @media (max-width: 768px) {
+    #nav .links { display: none; }
+    #mobileMenuBtn { display: flex; }
+    .foot { padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px)); }
+  }
+  @media (max-width: 640px) {
+    .hero { height: 58vh; min-height: 400px; }
+    .hero-body { padding-bottom: 44px; }
+    .search { width: auto; flex: 1; margin-left: 0; }
+  }
+  @media (max-width: 480px) {
+    :root { --card-width: clamp(104px, 29vw, 126px); }
+    .grid { grid-template-columns: repeat(3, 1fr); gap: 12px 10px; }
+    .row-head h2 { font-size: 17px; }
+    .results .page-title { font-size: 21px; }
+    #floating-title { max-width: 30vw; }
+    .floating-controls .lbl { display: none; }
+    .floating-controls button { padding: 0 12px; }
+  }
 </style>
 </head>
 <body>
 <header id="nav">
-  <a class="logo" href="#" data-view="home"><span class="logo-mark"><i class="fa-solid fa-play"></i></span>streamFY</a>
-  <nav class="links">
+  <a class="logo" href="#" data-view="home">
+    <span class="logo-mark"><img src="icon-192.png" alt="" width="32" height="32"></span>streamFY
+  </a>
+  <nav class="links" aria-label="Main">
     <button data-view="home" class="on">Home</button>
     <button data-view="movie">Movies</button>
     <button data-view="tv">TV shows</button>
+    <button data-view="watchlist"><i class="fa-solid fa-heart" style="color:var(--a)"></i> Watchlist</button>
+    <button data-view="history"><i class="fa-solid fa-clock-rotate-left"></i> History</button>
+    <button data-view="settings"><i class="fa-solid fa-gear"></i> Settings</button>
   </nav>
   <label class="search"><i class="fa-solid fa-magnifying-glass"></i>
-    <input id="q" type="search" placeholder="Search titles" autocomplete="off"></label>
+    <input id="q" type="search" placeholder="Search titles" aria-label="Search titles" autocomplete="off"></label>
 </header>
+
+<!-- Mobile menu trigger -->
+<button id="mobileMenuBtn" type="button" aria-label="Open menu" aria-haspopup="dialog" aria-controls="mobileMenuOverlay" aria-expanded="false">
+  <i class="fa-solid fa-bars"></i>
+</button>
+
+<!-- Mobile bottom sheet -->
+<div id="mobileMenuOverlay" aria-hidden="true">
+  <div class="mobile-sheet" role="dialog" aria-modal="true" aria-label="Menu">
+    <div class="sheet-head">
+      <span>Menu</span>
+      <button id="closeMobileMenu" type="button" aria-label="Close menu"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <button data-view="home" class="on"><i class="fa-solid fa-house"></i> Home</button>
+    <button data-view="movie"><i class="fa-solid fa-film"></i> Movies</button>
+    <button data-view="tv"><i class="fa-solid fa-tv"></i> TV shows</button>
+    <button data-view="watchlist"><i class="fa-solid fa-heart"></i> Watchlist</button>
+    <button data-view="history"><i class="fa-solid fa-clock-rotate-left"></i> History</button>
+    <button data-view="settings"><i class="fa-solid fa-gear"></i> Settings</button>
+  </div>
+</div>
 
 <main>
   <div id="setup" class="setup" hidden>
     <h2>Add your TMDB API key</h2>
     <p>Open <code>js/config.js</code> and paste your key into <code>TMDB_API_KEY</code>, then reload this page.</p>
   </div>
+
   <section id="hero" class="hero"></section>
   <section id="results" class="results wrap" hidden></section>
+
+  <!-- Watchlist -->
+  <section id="watchlist" class="results wrap" hidden>
+    <h2 class="page-title"><i class="fa-solid fa-heart"></i> My watchlist</h2>
+    <div id="watchlistGrid" class="grid"></div>
+  </section>
+
+  <!-- History -->
+  <section id="history" class="results wrap" hidden>
+    <h2 class="page-title"><i class="fa-solid fa-clock-rotate-left"></i> Recently watched</h2>
+    <div id="historyGrid" class="grid"></div>
+  </section>
+
+  <!-- Settings -->
+  <section id="settings" class="results wrap" hidden>
+    <h2 class="page-title"><i class="fa-solid fa-gear"></i> Streaming settings</h2>
+    <div class="panel">
+      <h3>Default streaming server</h3>
+      <p>Choose the server used for movies and TV shows across the app.</p>
+      <select id="settingServerSelect" aria-label="Default streaming server">
+        <option value="0">Server 1 (default)</option>
+        <option value="1">Server 2</option>
+      </select>
+    </div>
+  </section>
+
+  <!-- Category page -->
   <section id="category" class="results wrap" hidden>
     <div class="cat-head">
       <button class="btn sec" data-back><i class="fa-solid fa-arrow-left"></i> Back</button>
@@ -86,6 +280,7 @@
     <div id="catGrid" class="grid"></div>
     <div id="catEnd" class="sentinel" aria-live="polite"></div>
   </section>
+
   <div id="rows"></div>
 </main>
 
@@ -94,96 +289,139 @@
   <p>© 2026 streamFY · Powered by nyasatech1 developers · <button type="button" id="privacyLink" class="pp-link">Privacy Policy</button></p>
 </footer>
 
+<!-- Title details / trailer modal -->
 <div id="modal" class="modal" hidden>
-  <div class="sheet" role="dialog" aria-modal="true">
+  <div class="sheet" role="dialog" aria-modal="true" aria-label="Title details">
     <button class="x" id="close" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
-    <div id="stage" class="stage" style="min-height:360px; position:relative; background:#000;"></div>
+    <div id="stage" class="stage"></div>
     <div id="info" class="info"></div>
   </div>
 </div>
 
-<!-- Privacy Policy & Data Use -->
+<!-- Floating player controller -->
+<div id="floating-player-bar" role="region" aria-label="Player controls" hidden>
+  <span id="floating-title">Now playing</span>
+  <div class="floating-controls">
+    <button id="float-fs-btn" type="button"><i class="fa-solid fa-expand"></i> <span class="lbl">Fullscreen</span></button>
+    <button id="float-popout-btn" type="button"><i class="fa-solid fa-up-right-from-square"></i> <span class="lbl">Popout</span></button>
+  </div>
+</div>
+
+<!-- Privacy policy -->
 <div id="privacyModal" hidden>
   <div class="pp-sheet" role="dialog" aria-modal="true" aria-labelledby="ppTitle">
-    <button class="pp-x" id="privacyClose" aria-label="Close privacy policy"><i class="fa-solid fa-xmark"></i></button>
+    <button class="pp-x" id="privacyClose" type="button" aria-label="Close privacy policy"><i class="fa-solid fa-xmark"></i></button>
     <h2 id="ppTitle">Privacy Policy &amp; Data Use</h2>
-    <p class="pp-date">Last updated: November 7, 2026</p>
-    <p>streamFY is a movie and TV browsing app. We keep things simple: there are no accounts, no sign-up, and we do not sell your data. This page explains what is stored on your device and what is sent to other services when you use the app.</p>
+    <p class="pp-date">Last updated: November 11, 2026</p>
+    <p>streamFY is a movie and TV browsing app. There are no accounts and no sign-up, and we do not sell your data. This page explains what is stored on your device and what is sent to other services.</p>
 
     <h3>1. What we store on your device</h3>
     <ul>
-      <li><strong>Watchlist (local storage):</strong> When you tap "Watchlist", the title, poster, rating and year are saved in your browser's local storage on your own device. We cannot see it, and it is never uploaded to us.</li>
-      <li><strong>App cache (service worker):</strong> To load faster and work like an installed app, streamFY may save copies of its own files (pages, styles, scripts, icons) and some images in your browser's cache. This is only a copy of public app files and artwork. It does not contain personal information.</li>
+      <li><strong>Watchlist:</strong> when you tap Watchlist, the title, poster, rating and year are saved in your browser's local storage. We cannot see it and it is never uploaded to us.</li>
+      <li><strong>History:</strong> titles you open to watch are saved in local storage so you can find them again under History. They stay on your device.</li>
+      <li><strong>Settings:</strong> your preferred streaming server stays on your device.</li>
+      <li><strong>App cache (service worker):</strong> copies of the app's own files and some artwork, saved so the app loads faster and uses less data. It contains no personal information.</li>
     </ul>
 
-    <h3>2. How the cache is used</h3>
-    <ul>
-      <li>The cache makes the app open faster and use less mobile data.</li>
-      <li>It may be updated automatically when we release a new version of the app.</li>
-      <li>It stays on your device until you clear it or uninstall the app.</li>
-    </ul>
+    <h3>2. Information we do not collect</h3>
+    <p>streamFY does not ask for your name, email, phone number or location, and the app itself runs no advertising or analytics trackers.</p>
 
-    <h3>3. Information we do not collect</h3>
-    <p>streamFY does not ask for your name, email, phone number or location, and the app itself does not run advertising or analytics trackers. We do not create profiles about you.</p>
-
-    <h3>4. Third-party services</h3>
-    <p>To work, the app connects to other services. When it does, your device sends them standard technical information such as your IP address and browser type, and they have their own privacy policies:</p>
+    <h3>3. Third-party services</h3>
+    <p>To work, the app connects to other services. When it does, your device sends them standard technical information such as your IP address and browser type. They have their own privacy policies.</p>
     <ul>
-      <li><strong>TMDB (The Movie Database):</strong> provides titles, posters and details. Searches you type are sent to TMDB to get results. <em>This product uses the TMDB API but is not endorsed or certified by TMDB.</em></li>
-      <li><strong>Video players / streaming embeds:</strong> when you press Watch, the video loads from an external provider inside the player. These providers may set their own cookies, show their own ads, or collect usage data. We do not control them and do not host any video files.</li>
+      <li><strong>TMDB (The Movie Database):</strong> provides titles, posters and details. Searches you type are sent to TMDB. <em>This product uses the TMDB API but is not endorsed or certified by TMDB.</em></li>
+      <li><strong>Video players and streaming embeds:</strong> when you press Watch or Open Player, the video loads from an external provider. These providers may set cookies, show ads or collect usage data. We do not control them and do not host any video files.</li>
       <li><strong>YouTube (privacy-enhanced mode):</strong> trailers are played from YouTube.</li>
       <li><strong>Google Fonts and Font Awesome (CDN):</strong> used to load fonts and icons.</li>
     </ul>
 
-    <h3>5. Your choices</h3>
+    <h3>4. Your choices</h3>
     <ul>
-      <li>You can remove titles from your watchlist at any time from the title's page.</li>
-      <li>You can delete everything streamFY stored on this device with the button below, or by clearing the site's data in your browser settings.</li>
-      <li>You can use private/incognito mode or block third-party cookies in your browser to limit what external players store.</li>
+      <li>Remove a title from your watchlist at any time from its details page.</li>
+      <li>Delete everything streamFY stored on this device with the button below, or clear the site's data in your browser settings.</li>
+      <li>Use private browsing or block third-party cookies to limit what external players store.</li>
     </ul>
-    <button type="button" class="pp-clear" id="ppClear"><i class="fa-solid fa-trash"></i> Clear my watchlist &amp; cache</button><span class="pp-status" id="ppStatus" hidden>Cleared!</span>
+    <button type="button" class="pp-clear" id="ppClear"><i class="fa-solid fa-trash"></i> Clear my watchlist, history &amp; cache</button><span class="pp-status" id="ppStatus" role="status" hidden>Cleared!</span>
 
-    <h3>6. Children</h3>
+    <h3>5. Children</h3>
     <p>streamFY is not directed at children under 13, and we do not knowingly collect personal information from them.</p>
 
-    <h3>7. Changes</h3>
-    <p>We may update this policy when the app changes. The date at the top shows the latest version.</p>
-
-    <h3>8. Contact</h3>
-    <p>Questions? Email <a href="mailto:nyasatech1@gmail.com">nyasatech1@gmail.com</a>.</p>
+    <h3>6. Changes and contact</h3>
+    <p>We may update this policy when the app changes; the date above shows the latest version. Questions? Email <a href="mailto:nyasatech1@gmail.com">nyasatech1@gmail.com</a>.</p>
   </div>
 </div>
 
 <script src="js/config.js"></script>
 <script src="js/app.js"></script>
 
-<!-- Privacy Policy controls (independent of app.js) -->
+<!-- Menu, nav highlight and privacy controls -->
 <script>
 (() => {
-  const pm = document.getElementById('privacyModal');
-  const open = () => { pm.hidden = false; document.body.style.overflow = 'hidden'; };
-  const close = () => {
+  const $ = id => document.getElementById(id);
+  const menuBtn = $('mobileMenuBtn'), overlay = $('mobileMenuOverlay'), closeBtn = $('closeMobileMenu');
+  const pm = $('privacyModal'), ppLink = $('privacyLink');
+
+  /* Body classes follow the hidden attribute of the details modal and the player bar */
+  const watchHidden = (id, cls) => {
+    const el = $(id);
+    if (!el) return;
+    const sync = () => document.body.classList.toggle(cls, !el.hidden);
+    new MutationObserver(sync).observe(el, { attributes: true, attributeFilter: ['hidden'] });
+    sync();
+  };
+  watchHidden('modal', 'detail-open');
+  watchHidden('floating-player-bar', 'bar-open');
+
+  /* Mobile menu */
+  const setMenu = open => {
+    overlay.classList.toggle('open', open);
+    overlay.setAttribute('aria-hidden', String(!open));
+    menuBtn.setAttribute('aria-expanded', String(open));
+    document.body.style.overflow = open ? 'hidden' : '';
+    (open ? closeBtn : menuBtn).focus();
+  };
+  menuBtn.addEventListener('click', () => setMenu(true));
+  closeBtn.addEventListener('click', () => setMenu(false));
+  overlay.addEventListener('click', e => { if (e.target === overlay) setMenu(false); });
+  overlay.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => setMenu(false)));
+
+  /* Keep the desktop nav and the mobile menu highlighting the same page */
+  document.addEventListener('click', e => {
+    const b = e.target.closest('[data-view]');
+    if (!b) return;
+    document.querySelectorAll('.links [data-view], .mobile-sheet [data-view]')
+      .forEach(x => x.classList.toggle('on', x.dataset.view === b.dataset.view));
+  });
+
+  /* Privacy policy */
+  const openPP = () => { pm.hidden = false; document.body.style.overflow = 'hidden'; $('privacyClose').focus(); };
+  const closePP = () => {
     pm.hidden = true;
-    const detail = document.getElementById('modal');
+    const detail = $('modal');
     if (!detail || detail.hidden) document.body.style.overflow = '';
+    ppLink.focus();
     if (location.hash === '#privacy') history.replaceState(null, '', location.pathname + location.search);
   };
+  ppLink.addEventListener('click', openPP);
+  $('privacyClose').addEventListener('click', closePP);
+  pm.addEventListener('click', e => { if (e.target === pm) closePP(); });
+  if (location.hash === '#privacy') openPP();
 
-  document.getElementById('privacyLink').addEventListener('click', open);
-  document.getElementById('privacyClose').addEventListener('click', close);
-  pm.addEventListener('click', e => { if (e.target === pm) close(); });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !pm.hidden) close(); });
-  if (location.hash === '#privacy') open();
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    if (!pm.hidden) closePP();
+    else if (overlay.classList.contains('open')) setMenu(false);
+  });
 
-  document.getElementById('ppClear').addEventListener('click', async () => {
-    try { localStorage.removeItem('streamfy_watchlist'); } catch (e) {}
+  $('ppClear').addEventListener('click', async () => {
+    try { localStorage.removeItem('streamfy_watchlist'); localStorage.removeItem('streamfy_history'); } catch (e) {}
     try {
-      if ('caches' in window) {
-        const keys = await caches.keys();
-        await Promise.all(keys.map(k => caches.delete(k)));
-      }
+      if ('caches' in window) await Promise.all((await caches.keys()).map(k => caches.delete(k)));
     } catch (e) {}
-    const s = document.getElementById('ppStatus');
+    try {
+      if ('serviceWorker' in navigator) await Promise.all((await navigator.serviceWorker.getRegistrations()).map(r => r.unregister()));
+    } catch (e) {}
+    const s = $('ppStatus');
     s.hidden = false;
     setTimeout(() => (s.hidden = true), 2500);
   });
