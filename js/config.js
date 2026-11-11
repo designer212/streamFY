@@ -11,14 +11,20 @@ window.STREAMFY_CONFIG = {
       getUrl: (m, s, e) => m.type === 'tv' ? `https://vidsrc.me/embed/tv?tmdb=${m.id}&season=${s}&episode=${e}` : `https://vidsrc.me/embed/movie?tmdb=${m.id}` 
     },
     { 
-      id: 'vidlink', 
-      name: 'Server 2 (VidLink)', 
-      getUrl: (m, s, e) => m.type === 'tv' ? `https://vidlink.pro/tv/${m.id}/${s}/${e}` : `https://vidlink.pro/movie/${m.id}` 
+      id: 'vidsrcsh', 
+      name: 'Server 2 (VidSrc.sh)', 
+      getUrl: (m, s, e) => {
+        // vidsrc.sh works best with IMDb ID (tt...) if available, otherwise falls back to tmdb
+        const id = m.imdb_id || m.id;
+        return m.type === 'tv' 
+          ? `https://vidsrc.sh/embed/tv/${id}/${s}/${e}` 
+          : `https://vidsrc.sh/embed/movie/${id}`;
+      } 
     },
     { 
-      id: '2embed', 
-      name: 'Server 3 (2Embed)', 
-      getUrl: (m, s, e) => m.type === 'tv' ? `https://www.2embed.cc/embedtv/${m.id}&s=${s}&e=${e}` : `https://www.2embed.cc/embed/${m.id}` 
+      id: 'vidlink', 
+      name: 'Server 3 (VidLink)', 
+      getUrl: (m, s, e) => m.type === 'tv' ? `https://vidlink.pro/tv/${m.id}/${s}/${e}` : `https://vidlink.pro/movie/${m.id}` 
     },
     { 
       id: 'embedsu', 
