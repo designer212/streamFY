@@ -1,10 +1,17 @@
 (() => {
+  // Globally intercept and block rogue popup redirects from third-party players
+  window.open = function(url) {
+    console.warn('Blocked intrusive redirect:', url);
+    return null;
+  };
+
   const C = window.STREAMFY_CONFIG || {};
   const TMDB_BASE = C.TMDB_BASE || 'https://api.themoviedb.org/3';
   const TMDB_API_KEY = C.TMDB_API_KEY || '';
   const IMG_BASE = C.IMG || 'https://image.tmdb.org/t/p/';
   const SERVERS = C.SERVERS || [
-    { id: 'vidlink', name: 'Server 1', getUrl: (m, s, e) => m.type === 'tv' ? `https://vidlink.pro/tv/${m.id}/${s}/${e}` : `https://vidlink.pro/movie/${m.id}` }
+    { id: 'vidlink', name: 'Server 1', getUrl: (m, s, e) => m.type === 'tv' ? `https://vidlink.pro/tv/${m.id}/${s}/${e}` : `https://vidlink.pro/movie/${m.id}` },
+    { id: 'vidsrc', name: 'Server 2', getUrl: (m, s, e) => m.type === 'tv' ? `https://vidsrc.xyz/embed/tv?tmdb=${m.id}&season=${s}&episode=${e}` : `https://vidsrc.xyz/embed/movie?tmdb=${m.id}` }
   ];
 
   const $ = (s, r = document) => r.querySelector(s);
@@ -61,6 +68,8 @@
     hi = i;
     const x = hero[i], el = $('#hero');
     if (!x || !el) return;
+    const defaultServer = parseInt(localStorage.getItem('streamfy_default_server') || '0', 10);
+
     el.innerHTML = `<div class="hero-bg" style="background-image:url('${img(x.backdrop_path, 'original')}')"></div>
       <div class="wrap hero-body">
         <div class="meta"><span class="star" style="color:#fbbf24;"><i class="fa-solid fa-star"></i> ${(x.vote_average || 0).toFixed(1)}</span>
@@ -68,9 +77,8 @@
         <h1>${esc(x.title || x.name)}</h1>
         <p>${esc(x.overview)}</p>
         <div class="btns" style="display:flex; gap:10px; flex-wrap:wrap;">
-          <button class="btn pri" data-open="${i}" style="background:#22c55e; color:#000; font-weight:bold; border:none; padding:10px 18px; border-radius:8px; cursor:pointer;"><i class="fa-solid fa-play"></i> Watch Server 1</button>
-          <button class="btn pri" data-open="${i}" data-server="1" style="background:#fbbf24; color:#000; font-weight:bold; border:none; padding:10px 18px; border-radius:8px; cursor:pointer;"><i class="fa-solid fa-play"></i> Watch Server 2</button>
-          <button class="btn sec" data-open="${i}" data-trailer="1" style="background:rgba(255,255,255,0.15); color:#fff; border:none; padding:10px 18px; border-radius:8px; cursor:pointer;"><i class="fa-solid fa-film"></i> Trailer</button>
+          <button class="btn pri" data-open="${i}" data-server="${defaultServer}" style="background:var(--grad); color:#fff; font-weight:bold; border:none; padding:10px 22px; border-radius:99px; cursor:pointer;"><i class="fa-solid fa-play"></i> Watch Now</button>
+          <button class="btn sec" data-open="${i}" data-trailer="1" style="background:rgba(255,255,255,0.15); color:#fff; border:none; padding:10px 22px; border-radius:99px; cursor:pointer;"><i class="fa-solid fa-film"></i> Trailer</button>
         </div></div>
       <div class="wrap dots" style="left:0">${hero.map((_, n) => `<button class="${n === i ? 'on' : ''}" data-dot="${n}" aria-label="Slide ${n + 1}"></button>`).join('')}</div>`;
   }
@@ -200,7 +208,7 @@
     }, 400);
   }
 
-  async function openDetail(id, type, autoTrailer, serverIdx = 0) {
+  async function openDetail(id, type, autoTrailer, serverIdx = null) {
     const m = $('#modal');
     if (!m) return;
     m.hidden = false;
@@ -211,13 +219,17 @@
     try {
       const d = await api(`/${type}/${id}`, { append_to_response: 'videos' });
       const title = d.title || d.name;
-      cur = { id, type, title, year: (d.release_date || d.first_air_date || '').slice(0, 4), videos: (d.videos && d.videos.results) || [], seasons: d.seasons || [] };
+      cur = { id, type, title, year: (d.release_date || d.first_air_date || '').slice(0, 4), poster_path: d.poster_path, vote_average: d.vote_average, release_date: d.release_date || d.first_air_date, videos: (d.videos && d.videos.results) || [], seasons: d.seasons || [] };
       currentSeason = 1; currentEpisode = 1;
+
+      // Add to History automatically
+      addToHistory(cur);
 
       $('#stage').style.backgroundImage = `url('${img(d.backdrop_path, 'w1280')}')`;
       const run = d.runtime ? d.runtime + ' min' : d.number_of_seasons ? d.number_of_seasons + ' seasons' : '';
       
       const isFav = (JSON.parse(localStorage.getItem('streamfy_watchlist') || '[]')).some(x => x.id === id);
+      const defaultServer = serverIdx !== null ? serverIdx : parseInt(localStorage.getItem('streamfy_default_server') || '0', 10);
 
       $('#info').innerHTML = `<h2>${esc(title)}</h2>
         <div class="meta" style="margin-top:6px"><span class="star" style="color:#fbbf24;"><i class="fa-solid fa-star"></i> ${(d.vote_average || 0).toFixed(1)}</span><span>${cur.year}</span><span>${run}</span></div>
@@ -236,30 +248,29 @@
         ` : ''}
 
         <div class="btns" style="display:flex; flex-wrap:wrap; gap:8px;">
-          <button class="btn pri" onclick="playServer(0)" style="background:#22c55e; color:#000; font-weight:bold; border:none; padding:10px 16px; border-radius:8px; cursor:pointer;"><i class="fa-solid fa-play"></i> Watch Server 1</button>
-          <button class="btn pri" onclick="playServer(1)" style="background:#fbbf24; color:#000; font-weight:bold; border:none; padding:10px 16px; border-radius:8px; cursor:pointer;"><i class="fa-solid fa-play"></i> Watch Server 2</button>
-          <button class="btn sec" id="bTrailer" style="background:rgba(255,255,255,0.1); color:#fff; border:none; padding:10px 16px; border-radius:8px; cursor:pointer;"><i class="fa-solid fa-film"></i> Trailer</button>
-          <button class="btn sec" id="bFav" style="background:rgba(255,255,255,0.1); color:#fff; border:none; padding:10px 16px; border-radius:8px; cursor:pointer;"><i class="fa-solid fa-heart" style="color:${isFav ? '#00f2fe' : 'inherit'}"></i> ${isFav ? 'Saved' : 'Watchlist'}</button>
+          <button class="btn pri" onclick="playServer(${defaultServer})" style="background:var(--grad); color:#fff; font-weight:bold; border:none; padding:10px 18px; border-radius:99px; cursor:pointer;"><i class="fa-solid fa-play"></i> Watch Now</button>
+          <button class="btn sec" id="bTrailer" style="background:rgba(255,255,255,0.1); color:#fff; border:none; padding:10px 18px; border-radius:99px; cursor:pointer;"><i class="fa-solid fa-film"></i> Trailer</button>
+          <button class="btn sec" id="bFav" style="background:rgba(255,255,255,0.1); color:#fff; border:none; padding:10px 18px; border-radius:99px; cursor:pointer;"><i class="fa-solid fa-heart" style="color:${isFav ? '#00f2fe' : 'inherit'}"></i> ${isFav ? 'Saved' : 'Watchlist'}</button>
         </div>`;
 
       $('#bTrailer').onclick = playTrailer;
-      $('#bFav').onclick = () => toggleWatchlist(d, $('#bFav'));
+      $('#bFav').onclick = () => toggleWatchlist(cur, $('#bFav'));
 
       if (type === 'tv') {
         $('#seasonSelect').onchange = async (e) => {
           currentSeason = +e.target.value;
           await loadEpisodes(id, currentSeason);
-          playServer(0);
+          playServer(defaultServer);
         };
         $('#episodeSelect').onchange = (e) => {
           currentEpisode = +e.target.value;
-          playServer(0);
+          playServer(defaultServer);
         };
         await loadEpisodes(id, 1);
       }
 
       if (autoTrailer) playTrailer();
-      else playServer(serverIdx);
+      else playServer(defaultServer);
     } catch (e) { console.error('Detail load error:', e); $('#info').innerHTML = '<p class="empty">Could not load details.</p>'; }
   }
 
@@ -277,18 +288,26 @@
     }
   }
 
-  function toggleWatchlist(d, btn) {
+  function toggleWatchlist(item, btn) {
     let list = JSON.parse(localStorage.getItem('streamfy_watchlist') || '[]');
-    const idx = list.findIndex(x => x.id === d.id);
+    const idx = list.findIndex(x => x.id === item.id);
     if (idx > -1) {
       list.splice(idx, 1);
       btn.innerHTML = `<i class="fa-solid fa-heart"></i> Watchlist`;
       btn.querySelector('i').style.color = 'inherit';
     } else {
-      list.push({ id: d.id, title: d.title || d.name, poster_path: d.poster_path, vote_average: d.vote_average, release_date: d.release_date || d.first_air_date, media_type: cur.type });
+      list.push({ id: item.id, title: item.title, poster_path: item.poster_path, vote_average: item.vote_average, release_date: item.release_date, media_type: item.type });
       btn.innerHTML = `<i class="fa-solid fa-heart" style="color:#00f2fe"></i> Saved`;
     }
     localStorage.setItem('streamfy_watchlist', JSON.stringify(list));
+  }
+
+  function addToHistory(item) {
+    let history = JSON.parse(localStorage.getItem('streamfy_history') || '[]');
+    history = history.filter(x => x.id !== item.id);
+    history.unshift({ id: item.id, title: item.title, poster_path: item.poster_path, vote_average: item.vote_average, release_date: item.release_date, media_type: item.type });
+    if (history.length > 30) history.pop();
+    localStorage.setItem('streamfy_history', JSON.stringify(history));
   }
 
   const note = (html) => ($('#stage').innerHTML = `<div class="note">${html}</div>`);
@@ -316,194 +335,124 @@
 
   let playerHideTimer = null;
 
-window.playServer = function(idx) {
-  const st = $('#stage');
-  if (!st || !cur) return;
-  const srv = SERVERS[idx] || SERVERS[0];
-  const streamUrl = srv.getUrl(cur, currentSeason, currentEpisode);
-  
-  const primaryServers = SERVERS.map((s, i) => ({ ...s, originalIdx: i })).filter(s => !s.isBackup);
-  const backupServers = SERVERS.map((s, i) => ({ ...s, originalIdx: i })).filter(s => s.isBackup);
-  
-  // Clear any existing timer when switching servers
-  clearTimeout(playerHideTimer);
-  
-  st.innerHTML = `
-    <style>
-      @media (max-width: 768px) {
-        /* keep the player a proper 16:9 box instead of stretching */
-        #stage:not(:fullscreen) { aspect-ratio: 16 / 9 !important; height: auto !important; min-height: 0 !important; max-height: none !important; }
-        #playerIframe { width: 100% !important; height: 100% !important; }
+  window.playServer = function(idx) {
+    const st = $('#stage');
+    if (!st || !cur) return;
+    const srv = SERVERS[idx] || SERVERS[0];
+    const streamUrl = srv.getUrl(cur, currentSeason, currentEpisode);
+    
+    const primaryServers = SERVERS.map((s, i) => ({ ...s, originalIdx: i }));
+    
+    clearTimeout(playerHideTimer);
+    
+    st.innerHTML = `
+      <style>
+        @media (max-width: 768px) {
+          #stage:not(:fullscreen) { aspect-ratio: 16 / 9 !important; height: auto !important; min-height: 0 !important; max-height: none !important; }
+          #playerIframe { width: 100% !important; height: 100% !important; }
+          #playerNav { top: 8px !important; left: 8px !important; right: 8px !important; padding: 6px 8px !important; border-radius: 10px !important; }
+          #playerNav > div > button, #playerNav > div > a { padding: 6px 10px !important; font-size: 11px !important; }
+          #fsText { display: none; }
+          #playerMiniBtn { top: 8px !important; left: 8px !important; width: 32px !important; height: 32px !important; }
+          #adShield { top: 48px !important; height: calc(100% - 48px) !important; }
+        }
+      </style>
+      <button id="playerMiniBtn" onclick="togglePlayerNav()" style="position:absolute; top:16px; left:16px; z-index:35; background:rgba(10, 14, 23, 0.75); color:#fff; border:1px solid rgba(255,255,255,0.15); width:38px; height:38px; border-radius:10px; cursor:pointer; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); box-shadow: 0 4px 20px rgba(0,0,0,0.5); opacity:0; pointer-events:none; transition:all 0.3s;" title="Show Controls">
+        <i class="fa-solid fa-ellipsis" style="font-size:16px; color:#00f2fe;"></i>
+      </button>
 
-        /* compact control bar so it doesn't cover the video */
-        #playerNav { top: 8px !important; left: 8px !important; right: 8px !important; padding: 6px 8px !important; border-radius: 10px !important; }
-        #playerNav > div > button, #playerNav > div > a { padding: 6px 10px !important; font-size: 11px !important; }
-        #fsText { display: none; }
-        #playerMiniBtn { top: 8px !important; left: 8px !important; width: 32px !important; height: 32px !important; }
+      <div id="playerNav" style="position:absolute; top:16px; left:16px; right:16px; z-index:30; display:flex; justify-content:space-between; align-items:center; background:rgba(10, 14, 23, 0.9); padding:10px 16px; border-radius:14px; backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); border:1px solid rgba(255,255,255,0.1); box-shadow: 0 8px 32px rgba(0,0,0,0.7); font-family:'Plus Jakarta Sans', sans-serif; opacity:1; transform:translateY(0); transition:all 0.35s;">
+        <div style="display:flex; align-items:center; gap:8px; position:relative;">
+          <button onclick="togglePlayerNav()" style="background:rgba(255,255,255,0.08); color:#94a3b8; border:1px solid rgba(255,255,255,0.1); width:32px; height:32px; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center;" title="Hide Controls">
+            <i class="fa-solid fa-ellipsis" style="font-size:14px;"></i>
+          </button>
 
-        /* match the shield to the smaller bar */
-        #adShield { top: 48px !important; height: calc(100% - 48px) !important; }
-      }
-    </style>
-    <!-- Mini Trigger Button (Three Dots) - Shown when nav is hidden -->
-    <button id="playerMiniBtn" onclick="togglePlayerNav()" style="position:absolute; top:16px; left:16px; z-index:35; background:rgba(10, 14, 23, 0.75); color:#fff; border:1px solid rgba(255,255,255,0.15); width:38px; height:38px; border-radius:10px; cursor:pointer; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); box-shadow: 0 4px 20px rgba(0,0,0,0.5); opacity:0; pointer-events:none; transition:all 0.3s cubic-bezier(0.4, 0, 0.2, 1);" title="Show Controls">
-      <i class="fa-solid fa-ellipsis" style="font-size:16px; color:#00f2fe;"></i>
-    </button>
+          <button onclick="toggleServerMenu()" style="background:linear-gradient(135deg, rgba(34,197,94,0.15), rgba(0,242,254,0.15)); color:#fff; border:1px solid rgba(34,197,94,0.3); padding:7px 14px; font-size:12px; border-radius:10px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:8px;">
+            <i class="fa-solid fa-server" style="color:#22c55e;"></i> 
+            <span>${srv.name}</span> 
+            <i class="fa-solid fa-chevron-down" style="font-size:10px; opacity:0.8; margin-left:2px;"></i>
+          </button>
 
-    <!-- Upgraded Modern Player Control Bar with Smooth Transition -->
-    <div id="playerNav" style="position:absolute; top:16px; left:16px; right:16px; z-index:30; display:flex; justify-content:space-between; align-items:center; background:rgba(10, 14, 23, 0.9); padding:10px 16px; border-radius:14px; backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); border:1px solid rgba(255,255,255,0.1); box-shadow: 0 8px 32px rgba(0,0,0,0.7); font-family:'Plus Jakarta Sans', sans-serif; opacity:1; transform:translateY(0); transition:all 0.35s cubic-bezier(0.4, 0, 0.2, 1);">
-      
-      <!-- Left: Server Selector Dropdown Toggle & Hide Button -->
-      <div style="display:flex; align-items:center; gap:8px; position:relative;">
-        <!-- Minimize / Hide Control Bar Button -->
-        <button onclick="togglePlayerNav()" style="background:rgba(255,255,255,0.08); color:#94a3b8; border:1px solid rgba(255,255,255,0.1); width:32px; height:32px; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s;" title="Hide Controls">
-          <i class="fa-solid fa-ellipsis" style="font-size:14px;"></i>
-        </button>
+          <div id="serverDropdown" style="display:none; position:absolute; top:45px; left:40px; flex-direction:column; gap:6px; background:rgba(15, 23, 42, 0.95); padding:10px; border-radius:12px; border:1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 30px rgba(0,0,0,0.8); z-index:40; min-width:180px; backdrop-filter:blur(12px);">
+            <div style="font-size:10px; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; padding:0 4px;">Select Stream Source</div>
+            ${primaryServers.map(s => `
+              <button onclick="playServer(${s.originalIdx})" style="text-align:left; padding:8px 12px; font-size:12px; border-radius:8px; border:none; cursor:pointer; background:${s.originalIdx === idx ? 'rgba(34,197,94,0.2)' : 'transparent'}; color:${s.originalIdx === idx ? '#22c55e' : '#fff'}; font-weight:${s.originalIdx === idx ? '700' : '500'}; display:flex; align-items:center; justify-content:space-between;">
+                <span>${s.name}</span>
+                ${s.originalIdx === idx ? '<i class="fa-solid fa-check" style="font-size:10px; color:#22c55e;"></i>' : ''}
+              </button>
+            `).join('')}
+          </div>
+        </div>
 
-        <button onclick="toggleServerMenu()" style="background:linear-gradient(135deg, rgba(34,197,94,0.15), rgba(0,242,254,0.15)); color:#fff; border:1px solid rgba(34,197,94,0.3); padding:7px 14px; font-size:12px; border-radius:10px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:8px; transition:all 0.2s;">
-          <i class="fa-solid fa-server" style="color:#22c55e;"></i> 
-          <span>${srv.name}</span> 
-          <i class="fa-solid fa-chevron-down" style="font-size:10px; opacity:0.8; margin-left:2px;"></i>
-        </button>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <button id="fsBtn" onclick="toggleFullscreen()" style="background:rgba(255,255,255,0.08); color:#fff; border:1px solid rgba(255,255,255,0.12); padding:7px 14px; font-size:12px; border-radius:10px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px;" title="Toggle Fullscreen">
+            <i id="fsIcon" class="fa-solid fa-expand"></i> <span id="fsText">Fullscreen</span>
+          </button>
 
-        <!-- Hidden/Expandable Server List Popup -->
-        <div id="serverDropdown" style="display:none; position:absolute; top:45px; left:40px; flex-direction:column; gap:6px; background:rgba(15, 23, 42, 0.95); padding:10px; border-radius:12px; border:1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 30px rgba(0,0,0,0.8); z-index:40; min-width:180px; backdrop-filter:blur(12px);">
-          <div style="font-size:10px; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; padding:0 4px;">Select Stream Source</div>
-          ${primaryServers.map(s => `
-            <button onclick="playServer(${s.originalIdx})" style="text-align:left; padding:8px 12px; font-size:12px; border-radius:8px; border:none; cursor:pointer; background:${s.originalIdx === idx ? 'rgba(34,197,94,0.2)' : 'transparent'}; color:${s.originalIdx === idx ? '#22c55e' : '#fff'}; font-weight:${s.originalIdx === idx ? '700' : '500'}; display:flex; align-items:center; justify-content:space-between; transition:background 0.2s;">
-              <span>${s.name}</span>
-              ${s.originalIdx === idx ? '<i class="fa-solid fa-check" style="font-size:10px; color:#22c55e;"></i>' : ''}
-            </button>
-          `).join('')}
-
-          ${backupServers.length ? `
-            <div style="border-top:1px solid rgba(255,255,255,0.1); margin-top:4px; padding-top:6px;">
-              <select onchange="playServer(this.value)" style="width:100%; background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:8px 10px; font-size:11px; border-radius:8px; font-weight:bold; cursor:pointer;">
-                <option value="" disabled selected>🆘 Emergency Backup</option>
-                ${backupServers.map(s => `<option value="${s.originalIdx}" ${s.originalIdx === idx ? 'selected' : ''}>${s.name}</option>`).join('')}
-              </select>
-            </div>
-          ` : ''}
+          <a href="${esc(streamUrl)}" target="_blank" style="background:linear-gradient(135deg, #00f2fe, #4facfe); color:#000; text-decoration:none; padding:7px 14px; font-size:12px; border-radius:10px; font-weight:700; display:flex; align-items:center; gap:6px; box-shadow: 0 2px 10px rgba(0,242,254,0.3);">
+            <i class="fa-solid fa-external-link-alt"></i> Popout
+          </a>
         </div>
       </div>
 
-      <!-- Right: Fullscreen & Popout Actions -->
-      <div style="display:flex; align-items:center; gap:8px;">
-        <button id="fsBtn" onclick="toggleFullscreen()" style="background:rgba(255,255,255,0.08); color:#fff; border:1px solid rgba(255,255,255,0.12); padding:7px 14px; font-size:12px; border-radius:10px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all 0.2s;" title="Toggle Fullscreen">
-          <i id="fsIcon" class="fa-solid fa-expand"></i> <span id="fsText">Fullscreen</span>
-        </button>
+      <!-- Anti-Ad Shield: Absorbs the first rogue redirect click, then unlocks on interaction -->
+      <div id="adShield" onclick="this.style.pointerEvents='none'; this.style.display='none'; startPlayerHideTimer();" style="position:absolute; top:65px; left:0; width:100%; height:calc(100% - 65px); z-index:25; background:rgba(0,0,0,0.05); cursor:pointer;" title="Tap to start video"></div>
+      
+      <iframe id="playerIframe" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture; fullscreen" src="${esc(streamUrl)}" style="width:100%;height:100%;border:0;" onload="startPlayerHideTimer()"></iframe>
+    `;
+  };
 
-        <a href="${esc(streamUrl)}" target="_blank" style="background:linear-gradient(135deg, #00f2fe, #4facfe); color:#000; text-decoration:none; padding:7px 14px; font-size:12px; border-radius:10px; font-weight:700; display:flex; align-items:center; gap:6px; box-shadow: 0 2px 10px rgba(0,242,254,0.3);">
-          <i class="fa-solid fa-external-link-alt"></i> Popout
-        </a>
-      </div>
-    </div>
+  window.startPlayerHideTimer = function() {
+    clearTimeout(playerHideTimer);
+    playerHideTimer = setTimeout(() => {
+      const nav = document.getElementById('playerNav');
+      const mini = document.getElementById('playerMiniBtn');
+      const dropdown = document.getElementById('serverDropdown');
+      if (dropdown && dropdown.style.display === 'flex') return;
+      if (nav) { nav.style.opacity = '0'; nav.style.transform = 'translateY(-15px)'; nav.style.pointerEvents = 'none'; }
+      if (mini) { mini.style.opacity = '1'; mini.style.pointerEvents = 'auto'; }
+    }, 5000);
+  };
 
-    <!-- Anti-Ad Shield -->
-    <div id="adShield" onclick="this.remove(); startPlayerHideTimer();" style="position:absolute; top:65px; left:0; width:100%; height:calc(100% - 65px); z-index:25; background:transparent; cursor:pointer;" title="Click once to interact"></div>
-
-    <!-- Video iFrame -->
-    <iframe id="playerIframe" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture; fullscreen" src="${esc(streamUrl)}" style="width:100%;height:100%;border:0;" onload="startPlayerHideTimer()"></iframe>
-  `;
-};
-
-// Start the 5-second auto-hide timer
-window.startPlayerHideTimer = function() {
-  clearTimeout(playerHideTimer);
-  playerHideTimer = setTimeout(() => {
+  window.togglePlayerNav = function() {
     const nav = document.getElementById('playerNav');
     const mini = document.getElementById('playerMiniBtn');
-    const dropdown = document.getElementById('serverDropdown');
-    
-    // Don't hide if the server dropdown menu is currently open
-    if (dropdown && dropdown.style.display === 'flex') return;
-    
-    if (nav) {
-      nav.style.opacity = '0';
-      nav.style.transform = 'translateY(-15px)';
-      nav.style.pointerEvents = 'none';
+    if (!nav || !mini) return;
+    const isHidden = nav.style.opacity === '0';
+    if (isHidden) {
+      nav.style.opacity = '1'; nav.style.transform = 'translateY(0)'; nav.style.pointerEvents = 'auto';
+      mini.style.opacity = '0'; mini.style.pointerEvents = 'none';
+      startPlayerHideTimer();
+    } else {
+      nav.style.opacity = '0'; nav.style.transform = 'translateY(-15px)'; nav.style.pointerEvents = 'none';
+      mini.style.opacity = '1'; mini.style.pointerEvents = 'auto';
+      clearTimeout(playerHideTimer);
     }
-    if (mini) {
-      mini.style.opacity = '1';
-      mini.style.pointerEvents = 'auto';
-    }
-  }, 5000);
-};
-
-// Toggle manually between full control bar and mini 3-dots trigger
-window.togglePlayerNav = function() {
-  const nav = document.getElementById('playerNav');
-  const mini = document.getElementById('playerMiniBtn');
-  if (!nav || !mini) return;
-  
-  const isHidden = nav.style.opacity === '0';
-  if (isHidden) {
-    // Show Nav, Hide Mini Button
-    nav.style.opacity = '1';
-    nav.style.transform = 'translateY(0)';
-    nav.style.pointerEvents = 'auto';
-    
-    mini.style.opacity = '0';
-    mini.style.pointerEvents = 'none';
-    
-    // Restart timer when manually opened
-    startPlayerHideTimer();
-  } else {
-    // Hide Nav, Show Mini Button
-    nav.style.opacity = '0';
-    nav.style.transform = 'translateY(-15px)';
-    nav.style.pointerEvents = 'none';
-    
-    mini.style.opacity = '1';
-    mini.style.pointerEvents = 'auto';
-    
-    clearTimeout(playerHideTimer);
-  }
-};
-
-// Toggle Server Menu Dropdown
-window.toggleServerMenu = function() {
-  const dropdown = document.getElementById('serverDropdown');
-  if (dropdown) {
-    const isVisible = dropdown.style.display === 'flex';
-    dropdown.style.display = isVisible ? 'none' : 'flex';
-    if (!isVisible) {
-      clearTimeout(playerHideTimer); // Keep menu open while interacting
-    }
-  }
-};
-
-// Toggle Server Menu Dropdown
-window.toggleServerMenu = function() {
-  const dropdown = document.getElementById('serverDropdown');
-  if (dropdown) {
-    dropdown.style.display = dropdown.style.display === 'flex' ? 'none' : 'flex';
-  }
-};
-
-// Close server dropdown if clicking anywhere outside
-document.addEventListener('click', (e) => {
-  const dropdown = document.getElementById('serverDropdown');
-  if (dropdown && dropdown.style.display === 'flex') {
-    if (!e.target.closest('button[onclick="toggleServerMenu()"]') && !e.target.closest('#serverDropdown')) {
-      dropdown.style.display = 'none';
-    }
-  }
-});
+  };
 
   window.toggleServerMenu = function() {
     const dropdown = document.getElementById('serverDropdown');
     if (dropdown) {
-      dropdown.style.display = dropdown.style.display === 'flex' ? 'none' : 'flex';
+      const isVisible = dropdown.style.display === 'flex';
+      dropdown.style.display = isVisible ? 'none' : 'flex';
+      if (!isVisible) clearTimeout(playerHideTimer);
     }
   };
+
+  document.addEventListener('click', (e) => {
+    const dropdown = document.getElementById('serverDropdown');
+    if (dropdown && dropdown.style.display === 'flex') {
+      if (!e.target.closest('button[onclick="toggleServerMenu()"]') && !e.target.closest('#serverDropdown')) {
+        dropdown.style.display = 'none';
+      }
+    }
+  });
 
   window.toggleFullscreen = function() {
     const stage = document.getElementById('stage');
     const fsIcon = document.getElementById('fsIcon');
     const fsText = document.getElementById('fsText');
     if (!stage) return;
-
     if (!document.fullscreenElement) {
       stage.requestFullscreen().then(() => {
         if (fsIcon) fsIcon.className = 'fa-solid fa-compress';
@@ -519,9 +468,7 @@ document.addEventListener('click', (e) => {
 
   function closeModal() {
     const m = $('#modal');
-    if (m) {
-      m.hidden = true;
-    }
+    if (m) m.hidden = true;
     const st = $('#stage');
     if (st) st.innerHTML = '';
     document.body.style.overflow = '';
@@ -529,12 +476,67 @@ document.addEventListener('click', (e) => {
 
   function setView(v) {
     view = v;
-    document.querySelectorAll('.links button').forEach(b => b.classList.toggle('on', b.dataset.view === v));
-    const q = $('#q');
-    if (q) q.value = ''; 
-    search('');
-    loadHero(); 
-    buildRows();
+    document.querySelectorAll('.links button, .mobile-sheet button').forEach(b => b.classList.toggle('on', b.dataset.view === v));
+    
+    const heroEl = $('#hero');
+    const results = $('#results');
+    const rows = $('#rows');
+    const category = $('#category');
+    const watchlist = $('#watchlist');
+    const history = $('#history');
+    const settings = $('#settings');
+
+    [results, category, watchlist, history, settings].forEach(el => { if (el) el.hidden = true; });
+
+    if (v === 'home' || v === 'movie' || v === 'tv') {
+      if (heroEl) heroEl.hidden = false;
+      if (rows) rows.hidden = false;
+      const q = $('#q'); if (q) q.value = '';
+      search('');
+      loadHero();
+      buildRows();
+    } else if (v === 'watchlist') {
+      if (heroEl) heroEl.hidden = true;
+      if (rows) rows.hidden = true;
+      if (watchlist) {
+        watchlist.hidden = false;
+        const grid = $('#watchlistGrid');
+        const list = JSON.parse(localStorage.getItem('streamfy_watchlist') || '[]');
+        grid.innerHTML = '';
+        if (list.length === 0) {
+          grid.innerHTML = '<p class="empty">Your watchlist is empty. Save your favorite movies and shows to watch later.</p>';
+        } else {
+          fill(grid, list);
+        }
+      }
+    } else if (v === 'history') {
+      if (heroEl) heroEl.hidden = true;
+      if (rows) rows.hidden = true;
+      if (history) {
+        history.hidden = false;
+        const grid = $('#historyGrid');
+        const list = JSON.parse(localStorage.getItem('streamfy_history') || '[]');
+        grid.innerHTML = '';
+        if (list.length === 0) {
+          grid.innerHTML = '<p class="empty">No recently watched titles yet.</p>';
+        } else {
+          fill(grid, list);
+        }
+      }
+    } else if (v === 'settings') {
+      if (heroEl) heroEl.hidden = true;
+      if (rows) rows.hidden = true;
+      if (settings) {
+        settings.hidden = false;
+        const settingSel = $('#settingServerSelect');
+        if (settingSel) {
+          settingSel.value = localStorage.getItem('streamfy_default_server') || '0';
+          settingSel.onchange = (e) => {
+            localStorage.setItem('streamfy_default_server', e.target.value);
+          };
+        }
+      }
+    }
     scrollTo({ top: 0 });
   }
 
@@ -546,7 +548,7 @@ document.addEventListener('click', (e) => {
     else if (t.dataset.open) { 
       const x = hero[+t.dataset.open]; 
       if (x) {
-        const sIdx = t.dataset.server ? parseInt(t.dataset.server) : 0;
+        const sIdx = t.dataset.server !== undefined ? parseInt(t.dataset.server) : null;
         openDetail(x.id, x.media_type, !!t.dataset.trailer, sIdx); 
       }
     }
