@@ -39,6 +39,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="css/styles.css">
+<script src="js/theme.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <!-- Page-level styles (loaded after styles.css so they win without !important where possible) -->
 <style>
@@ -200,6 +202,61 @@
 </style>
 </head>
 <body>
+<!-- Sign-in gate (shown until the visitor signs in or continues as guest) -->
+<div id="authGate" class="auth-gate" role="dialog" aria-modal="true" aria-labelledby="authTitle" hidden>
+  <div class="auth-wrap">
+    <div class="auth-brand">
+      <img src="icon-192.png" alt="" width="56" height="56">
+      <h1 id="authTitle">stream<span>FY</span></h1>
+      <p>Sign in to save favourites and pick up where you left off.</p>
+    </div>
+    <div class="auth-card">
+      <div class="auth-tabs" id="authTabs" role="tablist" aria-label="Authentication mode" data-mode="signin">
+        <span class="auth-ind" aria-hidden="true"></span>
+        <button type="button" id="tabSignIn" class="active" role="tab" aria-selected="true">Sign In</button>
+        <button type="button" id="tabSignUp" role="tab" aria-selected="false">Sign Up</button>
+      </div>
+      <button type="button" id="googleBtn" class="auth-google" disabled title="Coming soon">
+        <svg viewBox="0 0 48 48" width="18" height="18" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+        <span>Continue with Google</span>
+      </button>
+      <div class="auth-or"><span>or use email</span></div>
+      <form id="authForm" novalidate>
+        <div class="auth-field">
+          <label for="authEmail">Email address</label>
+          <input type="email" id="authEmail" placeholder="name@example.com" autocomplete="email" required>
+        </div>
+        <div class="auth-field">
+          <label for="authPass">Password</label>
+          <input type="password" id="authPass" placeholder="••••••••" autocomplete="current-password" required>
+        </div>
+        <div class="auth-field" id="authConfirmGroup" hidden>
+          <label for="authConfirm">Confirm password</label>
+          <input type="password" id="authConfirm" placeholder="••••••••" autocomplete="new-password">
+        </div>
+        <button type="submit" id="authSubmit" class="auth-submit">Sign in</button>
+      </form>
+      <p class="auth-switch"><span id="authSwitchText">Don't have an account?</span> <button type="button" id="authSwitchLink" class="auth-link">Sign up</button></p>
+      <div id="authStatus" class="auth-status" role="status" aria-live="polite"></div>
+      <div class="auth-or"><span>or</span></div>
+      <button type="button" id="guestBtn" class="auth-guest"><span>Continue as guest</span> <em>Not recommended</em></button>
+      <p class="auth-note">Guests can't save favourites, see watch history or change streaming servers.</p>
+    </div>
+  </div>
+</div>
+
+<!-- "Account needed" prompt for guests -->
+<div id="authPrompt" class="auth-prompt" hidden>
+  <div class="auth-prompt-box" role="alertdialog" aria-modal="true" aria-labelledby="apTitle" aria-describedby="apText">
+    <h3 id="apTitle"><i class="fa-solid fa-lock"></i> Account needed</h3>
+    <p id="apText"></p>
+    <div class="ap-btns">
+      <button type="button" id="apSignin" class="pri">Sign in</button>
+      <button type="button" id="apClose" class="sec">Not now</button>
+    </div>
+  </div>
+</div>
+
 <header id="nav">
   <a class="logo" href="#" data-view="home">
     <span class="logo-mark"><img src="icon-192.png" alt="" width="32" height="32"></span>streamFY
@@ -214,6 +271,11 @@
   </nav>
   <label class="search"><i class="fa-solid fa-magnifying-glass"></i>
     <input id="q" type="search" placeholder="Search titles" aria-label="Search titles" autocomplete="off"></label>
+  <div id="authBox" class="auth-box" hidden>
+    <span id="authBadge" class="auth-badge"></span>
+    <button type="button" id="authChip" class="auth-chip" aria-label="Profile and settings" hidden><span id="chipAvatar" class="avatar sm"></span><span id="chipName" class="chip-name"></span></button>
+    <button type="button" id="authAction" class="auth-action"></button>
+  </div>
 </header>
 
 <!-- Mobile menu trigger -->
@@ -260,14 +322,54 @@
 
   <!-- Settings -->
   <section id="settings" class="results wrap" hidden>
-    <h2 class="page-title"><i class="fa-solid fa-gear"></i> Streaming settings</h2>
+    <h2 class="page-title"><i class="fa-solid fa-gear"></i> Settings</h2>
+
     <div class="panel">
-      <h3>Default streaming server</h3>
+      <h3>Profile</h3>
+      <p>This is how you appear in streamFY.</p>
+      <div class="prof-row">
+        <div id="profAvatar" class="avatar lg" aria-hidden="true"></div>
+        <div class="prof-fields">
+          <label for="profName">Display name</label>
+          <input type="text" id="profName" maxlength="30" placeholder="Your name" autocomplete="nickname">
+          <small id="profEmail"></small>
+        </div>
+      </div>
+      <div class="pick-label">Avatar</div>
+      <div id="avatarPick" class="picker"></div>
+      <div class="pick-label">Avatar colour</div>
+      <div id="colorPick" class="picker"></div>
+      <div class="prof-actions">
+        <button type="button" id="profSave" class="auth-submit">Save profile</button>
+        <span id="profStatus" class="prof-status" role="status" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Appearance</h3>
+      <p>Choose light or dark mode and a colour theme. These apply on this device.</p>
+      <div class="set-row">
+        <span id="modeLabel" class="set-label">Dark mode</span>
+        <label class="switch"><input type="checkbox" id="darkToggle" role="switch" aria-labelledby="modeLabel"><span class="knob"><i class="fa-solid fa-moon"></i><i class="fa-solid fa-sun"></i></span></label>
+      </div>
+      <label class="check-row"><input type="checkbox" id="followSystem"> Match my device setting</label>
+      <div class="pick-label">Colour theme</div>
+      <div id="accentGrid" class="swatches"></div>
+    </div>
+
+    <div class="panel">
+      <h3>Streaming</h3>
       <p>Choose the server used for movies and TV shows across the app.</p>
       <select id="settingServerSelect" aria-label="Default streaming server">
         <option value="0">Server 1 (default)</option>
         <option value="1">Server 2</option>
       </select>
+    </div>
+
+    <div class="panel">
+      <h3>Account</h3>
+      <p>Signed in as <strong id="accountEmail"></strong></p>
+      <button type="button" id="logoutBtn" class="danger-btn"><i class="fa-solid fa-right-from-bracket"></i> Log out</button>
     </div>
   </section>
 
@@ -312,23 +414,25 @@
   <div class="pp-sheet" role="dialog" aria-modal="true" aria-labelledby="ppTitle">
     <button class="pp-x" id="privacyClose" type="button" aria-label="Close privacy policy"><i class="fa-solid fa-xmark"></i></button>
     <h2 id="ppTitle">Privacy Policy &amp; Data Use</h2>
-    <p class="pp-date">Last updated: November 11, 2026</p>
-    <p>streamFY is a movie and TV browsing app. There are no accounts and no sign-up, and we do not sell your data. This page explains what is stored on your device and what is sent to other services.</p>
+    <p class="pp-date">Last updated: November 12, 2026</p>
+    <p>streamFY is a movie and TV browsing app. You can browse as a guest or create an optional account, and we do not sell your data. This page explains what is stored on your device and what is sent to other services.</p>
 
     <h3>1. What we store on your device</h3>
     <ul>
-      <li><strong>Watchlist:</strong> when you tap Watchlist, the title, poster, rating and year are saved in your browser's local storage. We cannot see it and it is never uploaded to us.</li>
+      <li><strong>Watchlist:</strong> when you tap Watchlist, the title, poster, rating and year are saved in your browser's local storage, under your account. We cannot see it and it is never uploaded to us. Guests cannot save a watchlist.</li>
       <li><strong>History:</strong> titles you open to watch are saved in local storage so you can find them again under History. They stay on your device.</li>
-      <li><strong>Settings:</strong> your preferred streaming server stays on your device.</li>
+      <li><strong>Settings:</strong> your preferred streaming server and your light/dark and colour theme stay on your device.</li>
       <li><strong>App cache (service worker):</strong> copies of the app's own files and some artwork, saved so the app loads faster and uses less data. It contains no personal information.</li>
     </ul>
 
     <h3>2. Information we do not collect</h3>
-    <p>streamFY does not ask for your name, email, phone number or location, and the app itself runs no advertising or analytics trackers.</p>
+    <p>If you create an account we collect your email address and a password (kept securely hashed by our sign-in provider), or your Google account's email, name and photo if you choose Continue with Google, plus the display name and avatar you pick in Settings. We do not ask for your name, phone number or location, and the app itself runs no advertising or analytics trackers. Guest mode needs no account and saves no watchlist, history or settings.</p>
 
     <h3>3. Third-party services</h3>
     <p>To work, the app connects to other services. When it does, your device sends them standard technical information such as your IP address and browser type. They have their own privacy policies.</p>
     <ul>
+      <li><strong>Google Sign-In (optional):</strong> if you choose Continue with Google, Google shares your email address, name and profile photo with us through our sign-in provider. Google's own privacy policy applies to that sign-in.</li>
+      <li><strong>Supabase:</strong> handles account sign-up and sign-in, and stores your email address, login session, and the display name and avatar you choose.</li>
       <li><strong>TMDB (The Movie Database):</strong> provides titles, posters and details. Searches you type are sent to TMDB. <em>This product uses the TMDB API but is not endorsed or certified by TMDB.</em></li>
       <li><strong>Video players and streaming embeds:</strong> when you press Watch or Open Player, the video loads from an external provider. These providers may set cookies, show ads or collect usage data. We do not control them and do not host any video files.</li>
       <li><strong>YouTube (privacy-enhanced mode):</strong> trailers are played from YouTube.</li>
@@ -348,10 +452,20 @@
 
     <h3>6. Changes and contact</h3>
     <p>We may update this policy when the app changes; the date above shows the latest version. Questions? Email <a href="mailto:nyasatech1@gmail.com">nyasatech1@gmail.com</a>.</p>
+    <div class="pp-consent" id="ppConsent" hidden>
+      <p>Please read this policy. To use streamFY you need to agree to it.</p>
+      <div class="pp-consent-btns">
+        <button type="button" id="ppAgree" class="auth-submit">I agree</button>
+        <button type="button" id="ppDecline" class="auth-link">Decline</button>
+      </div>
+      <p id="ppDeclineMsg" class="pp-decline" hidden>You need to accept the Privacy Policy to use streamFY. You can close this tab if you would rather not.</p>
+    </div>
   </div>
 </div>
 
 <script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/settings.js"></script>
 <script src="js/app.js"></script>
 
 <!-- Menu, nav highlight and privacy controls -->
@@ -396,6 +510,7 @@
   /* Privacy policy */
   const openPP = () => { pm.hidden = false; document.body.style.overflow = 'hidden'; $('privacyClose').focus(); };
   const closePP = () => {
+    if (document.body.classList.contains('consent-mode')) return; // must agree first
     pm.hidden = true;
     const detail = $('modal');
     if (!detail || detail.hidden) document.body.style.overflow = '';
@@ -414,7 +529,7 @@
   });
 
   $('ppClear').addEventListener('click', async () => {
-    try { localStorage.removeItem('streamfy_watchlist'); localStorage.removeItem('streamfy_history'); } catch (e) {}
+    try { Object.keys(localStorage).filter(k => k.startsWith('streamfy_')).forEach(k => localStorage.removeItem(k)); } catch (e) {}
     try {
       if ('caches' in window) await Promise.all((await caches.keys()).map(k => caches.delete(k)));
     } catch (e) {}
