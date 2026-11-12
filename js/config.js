@@ -4,6 +4,10 @@ window.STREAMFY_CONFIG = {
   TMDB_BASE: 'https://api.themoviedb.org/3',
   IMG: 'https://image.tmdb.org/t/p/',
 
+  // Supabase (Dashboard -> Project Settings -> API): project URL and public anon/publishable key
+  SUPABASE_URL: 'https://dphvuutqffhjdorkpijv.supabase.co',
+  SUPABASE_ANON_KEY: 'sb_publishable_0ZEpX3W2-boV51OMehZw6w_bMTswfpC',
+
   SERVERS: [
     { 
       id: 'vidsrc', 
