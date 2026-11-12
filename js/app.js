@@ -18,6 +18,12 @@
   const img = (p, s = 'w500') => (p ? IMG_BASE + s + p : '');
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
+  // Account helpers (js/auth.js). Falls back to plain localStorage keys if auth.js is missing.
+  const A = () => window.StreamfyAuth || { isGuest: () => false, key: n => 'streamfy_' + n, promptSignIn: () => {} };
+  const lsGet = (n, fallback) => { const k = A().key(n); const v = k ? localStorage.getItem(k) : null; return v === null ? fallback : v; };
+  const lsSet = (n, v) => { const k = A().key(n); if (k) localStorage.setItem(k, v); };
+  const GUEST_LOCKED = { watchlist: 'view your watchlist', history: 'see your watch history', settings: 'change settings and switch servers' };
+
   const ROWS = [
     { t: 'Trending this week', p: '/trending/all/week', v: ['home'] },
     { t: 'Popular movies', p: '/movie/popular', type: 'movie', v: ['home', 'movie'] },
@@ -68,7 +74,7 @@
     hi = i;
     const x = hero[i], el = $('#hero');
     if (!x || !el) return;
-    const defaultServer = parseInt(localStorage.getItem('streamfy_default_server') || '0', 10);
+    const defaultServer = parseInt(lsGet('default_server', '0'), 10);
 
     el.innerHTML = `<div class="hero-bg" style="background-image:url('${img(x.backdrop_path, 'original')}')"></div>
       <div class="wrap hero-body">
@@ -118,7 +124,7 @@
       s.className = 'row';
       s.innerHTML = `<div class="row-head">
           <h2>${r.t}</h2>
-          <button class="more-btn" style="background:none; border:none; color:#00f2fe; cursor:pointer; font-weight:600; font-size:13px; display:flex; align-items:center; gap:4px;">More <i class="fa-solid fa-chevron-right" style="font-size:10px;"></i></button>
+          <button class="more-btn" style="background:none; border:none; color:var(--a); cursor:pointer; font-weight:600; font-size:13px; display:flex; align-items:center; gap:4px;">More <i class="fa-solid fa-chevron-right" style="font-size:10px;"></i></button>
         </div>
         <div class="row-wrap">
           <button class="arr l" aria-label="Scroll left"><i class="fa-solid fa-chevron-left"></i></button>
@@ -177,12 +183,12 @@
       const rating = x.vote_average ? x.vote_average.toFixed(1) : 'NR';
 
       b.innerHTML = `
-        <div class="ph" style="position:relative; width:100%; aspect-ratio:2/3; background:#101622; border-radius:12px; overflow:hidden; margin-bottom:8px;">
+        <div class="ph" style="position:relative; width:100%; aspect-ratio:2/3; background:var(--panel); border-radius:12px; overflow:hidden; margin-bottom:8px;">
           <img loading="lazy" src="${posterUrl}" alt="${title}" style="width:100%; height:100%; object-fit:cover;" onerror="this.src='https://via.placeholder.com/500x750?text=No+Image'">
           <span class="rt" style="position:absolute; top:8px; right:8px; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px); padding:2px 6px; border-radius:6px; font-size:10px; color:#fbbf24; font-weight:bold;"><i class="fa-solid fa-star"></i> ${rating}</span>
         </div>
-        <h3 style="font-size:13px; font-weight:bold; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin:0 0 2px 0;">${title}</h3>
-        <small style="font-size:11px; color:#94a3b8;">${year} · ${ty === 'tv' ? 'Series' : 'Film'}</small>`;
+        <h3 style="font-size:13px; font-weight:bold; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin:0 0 2px 0;">${title}</h3>
+        <small style="font-size:11px; color:var(--mute);">${year} · ${ty === 'tv' ? 'Series' : 'Film'}</small>`;
       
       b.onclick = () => openDetail(x.id, ty);
       el.appendChild(b);
@@ -228,8 +234,8 @@
       $('#stage').style.backgroundImage = `url('${img(d.backdrop_path, 'w1280')}')`;
       const run = d.runtime ? d.runtime + ' min' : d.number_of_seasons ? d.number_of_seasons + ' seasons' : '';
       
-      const isFav = (JSON.parse(localStorage.getItem('streamfy_watchlist') || '[]')).some(x => x.id === id);
-      const defaultServer = serverIdx !== null ? serverIdx : parseInt(localStorage.getItem('streamfy_default_server') || '0', 10);
+      const isFav = JSON.parse(lsGet('watchlist', '[]')).some(x => x.id === id);
+      const defaultServer = serverIdx !== null ? serverIdx : parseInt(lsGet('default_server', '0'), 10);
 
       $('#info').innerHTML = `<h2>${esc(title)}</h2>
         <div class="meta" style="margin-top:6px"><span class="star" style="color:#fbbf24;"><i class="fa-solid fa-star"></i> ${(d.vote_average || 0).toFixed(1)}</span><span>${cur.year}</span><span>${run}</span></div>
@@ -238,10 +244,10 @@
         
         ${type === 'tv' ? `
           <div style="display:flex; gap:10px; margin: 12px 0;">
-            <select id="seasonSelect" style="background:#101622; color:#fff; padding:6px; border-radius:8px; border:1px solid rgba(255,255,255,0.1)">
+            <select id="seasonSelect" style="background:var(--bg); color:var(--text); padding:6px; border-radius:8px; border:1px solid var(--line)">
               ${(cur.seasons || []).filter(s => s.season_number > 0).map(s => `<option value="${s.season_number}">Season ${s.season_number}</option>`).join('')}
             </select>
-            <select id="episodeSelect" style="background:#101622; color:#fff; padding:6px; border-radius:8px; border:1px solid rgba(255,255,255,0.1)">
+            <select id="episodeSelect" style="background:var(--bg); color:var(--text); padding:6px; border-radius:8px; border:1px solid var(--line)">
               <option value="1">Episode 1</option>
             </select>
           </div>
@@ -249,8 +255,8 @@
 
         <div class="btns" style="display:flex; flex-wrap:wrap; gap:8px;">
           <button class="btn pri" onclick="playServer(${defaultServer})" style="background:var(--grad); color:#fff; font-weight:bold; border:none; padding:10px 18px; border-radius:99px; cursor:pointer;"><i class="fa-solid fa-play"></i> Watch Now</button>
-          <button class="btn sec" id="bTrailer" style="background:rgba(255,255,255,0.1); color:#fff; border:none; padding:10px 18px; border-radius:99px; cursor:pointer;"><i class="fa-solid fa-film"></i> Trailer</button>
-          <button class="btn sec" id="bFav" style="background:rgba(255,255,255,0.1); color:#fff; border:none; padding:10px 18px; border-radius:99px; cursor:pointer;"><i class="fa-solid fa-heart" style="color:${isFav ? '#00f2fe' : 'inherit'}"></i> ${isFav ? 'Saved' : 'Watchlist'}</button>
+          <button class="btn sec" id="bTrailer" style="background:var(--btn-sec); color:var(--text); border:none; padding:10px 18px; border-radius:99px; cursor:pointer;"><i class="fa-solid fa-film"></i> Trailer</button>
+          <button class="btn sec" id="bFav" style="background:var(--btn-sec); color:var(--text); border:none; padding:10px 18px; border-radius:99px; cursor:pointer;"><i class="fa-solid fa-heart" style="color:${isFav ? 'var(--a)' : 'inherit'}"></i> ${isFav ? 'Saved' : 'Watchlist'}</button>
         </div>`;
 
       $('#bTrailer').onclick = playTrailer;
@@ -289,7 +295,8 @@
   }
 
   function toggleWatchlist(item, btn) {
-    let list = JSON.parse(localStorage.getItem('streamfy_watchlist') || '[]');
+    if (A().isGuest()) return A().promptSignIn('save titles to your watchlist');
+    let list = JSON.parse(lsGet('watchlist', '[]'));
     const idx = list.findIndex(x => x.id === item.id);
     if (idx > -1) {
       list.splice(idx, 1);
@@ -297,17 +304,18 @@
       btn.querySelector('i').style.color = 'inherit';
     } else {
       list.push({ id: item.id, title: item.title, poster_path: item.poster_path, vote_average: item.vote_average, release_date: item.release_date, media_type: item.type });
-      btn.innerHTML = `<i class="fa-solid fa-heart" style="color:#00f2fe"></i> Saved`;
+      btn.innerHTML = `<i class="fa-solid fa-heart" style="color:var(--a)"></i> Saved`;
     }
-    localStorage.setItem('streamfy_watchlist', JSON.stringify(list));
+    lsSet('watchlist', JSON.stringify(list));
   }
 
   function addToHistory(item) {
-    let history = JSON.parse(localStorage.getItem('streamfy_history') || '[]');
+    if (A().isGuest()) return; // guests keep no watch history
+    let history = JSON.parse(lsGet('history', '[]'));
     history = history.filter(x => x.id !== item.id);
     history.unshift({ id: item.id, title: item.title, poster_path: item.poster_path, vote_average: item.vote_average, release_date: item.release_date, media_type: item.type });
     if (history.length > 30) history.pop();
-    localStorage.setItem('streamfy_history', JSON.stringify(history));
+    lsSet('history', JSON.stringify(history));
   }
 
   const note = (html) => ($('#stage').innerHTML = `<div class="note">${html}</div>`);
@@ -336,6 +344,7 @@
   let playerHideTimer = null;
 
   window.playServer = function(idx) {
+    if (A().isGuest()) idx = 0; // guests always use the default server
     const st = $('#stage');
     if (!st || !cur) return;
     const srv = SERVERS[idx] || SERVERS[0];
@@ -358,7 +367,7 @@
         }
       </style>
       <button id="playerMiniBtn" onclick="togglePlayerNav()" style="position:absolute; top:16px; left:16px; z-index:35; background:rgba(10, 14, 23, 0.75); color:#fff; border:1px solid rgba(255,255,255,0.15); width:38px; height:38px; border-radius:10px; cursor:pointer; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); box-shadow: 0 4px 20px rgba(0,0,0,0.5); opacity:0; pointer-events:none; transition:all 0.3s;" title="Show Controls">
-        <i class="fa-solid fa-ellipsis" style="font-size:16px; color:#00f2fe;"></i>
+        <i class="fa-solid fa-ellipsis" style="font-size:16px; color:var(--a);"></i>
       </button>
 
       <div id="playerNav" style="position:absolute; top:16px; left:16px; right:16px; z-index:30; display:flex; justify-content:space-between; align-items:center; background:rgba(10, 14, 23, 0.9); padding:10px 16px; border-radius:14px; backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); border:1px solid rgba(255,255,255,0.1); box-shadow: 0 8px 32px rgba(0,0,0,0.7); font-family:'Plus Jakarta Sans', sans-serif; opacity:1; transform:translateY(0); transition:all 0.35s;">
@@ -431,6 +440,7 @@
   };
 
   window.toggleServerMenu = function() {
+    if (A().isGuest()) return A().promptSignIn('switch streaming servers');
     const dropdown = document.getElementById('serverDropdown');
     if (dropdown) {
       const isVisible = dropdown.style.display === 'flex';
@@ -475,6 +485,7 @@
   }
 
   function setView(v) {
+    if (A().isGuest() && GUEST_LOCKED[v]) return A().promptSignIn(GUEST_LOCKED[v]);
     view = v;
     document.querySelectorAll('.links button, .mobile-sheet button').forEach(b => b.classList.toggle('on', b.dataset.view === v));
     
@@ -501,7 +512,7 @@
       if (watchlist) {
         watchlist.hidden = false;
         const grid = $('#watchlistGrid');
-        const list = JSON.parse(localStorage.getItem('streamfy_watchlist') || '[]');
+        const list = JSON.parse(lsGet('watchlist', '[]'));
         grid.innerHTML = '';
         if (list.length === 0) {
           grid.innerHTML = '<p class="empty">Your watchlist is empty. Save your favorite movies and shows to watch later.</p>';
@@ -515,7 +526,7 @@
       if (history) {
         history.hidden = false;
         const grid = $('#historyGrid');
-        const list = JSON.parse(localStorage.getItem('streamfy_history') || '[]');
+        const list = JSON.parse(lsGet('history', '[]'));
         grid.innerHTML = '';
         if (list.length === 0) {
           grid.innerHTML = '<p class="empty">No recently watched titles yet.</p>';
@@ -528,11 +539,12 @@
       if (rows) rows.hidden = true;
       if (settings) {
         settings.hidden = false;
+        window.dispatchEvent(new Event('streamfy:settings'));
         const settingSel = $('#settingServerSelect');
         if (settingSel) {
-          settingSel.value = localStorage.getItem('streamfy_default_server') || '0';
+          settingSel.value = lsGet('default_server', '0');
           settingSel.onchange = (e) => {
-            localStorage.setItem('streamfy_default_server', e.target.value);
+            lsSet('default_server', e.target.value);
           };
         }
       }
@@ -566,6 +578,9 @@
   document.addEventListener('keydown', e => e.key === 'Escape' && closeModal());
   addEventListener('scroll', () => { const nav = $('#nav'); if (nav) nav.classList.toggle('solid', scrollY > 30); }, { passive: true });
   
+  // Re-render the hero when the account changes so its Watch button uses the right server
+  addEventListener('streamfy:auth', () => { if (hero.length) showHero(hi); });
+
   const qInput = $('#q');
   if (qInput) qInput.addEventListener('input', e => search(e.target.value.trim()));
 
